@@ -1,0 +1,646 @@
+{
+  "version": "4.5.0",
+  "codename": "QUALITY",
+  "name": "Hampstead Concierge Quality Lead Processing",
+  "description": "Quality-focused lead processing with validation, enrichment, and routing",
+  
+  "scenario": {
+    "id": "hampstead_quality_v4.5",
+    "trigger": "webhook_receive",
+    "timeout": 90,
+    "maxConcurrency": 20,
+    "qualityMode": true
+  },
+
+  "modules": [
+    {
+      "id": 1,
+      "name": "Webhook Trigger",
+      "type": "webhook",
+      "config": {
+        "name": "Lead from Vapi v4.5",
+        "dataStructure": {
+          "caller_name": "string|required",
+          "phone_number": "string|required",
+          "phone_confirmed": "boolean|required",
+          "category": "string|required",
+          "address": "string",
+          "postcode": "string",
+          "summary": "string|required",
+          "project_type": "string",
+          "sentiment": "string",
+          "caller_emotion": "string",
+          "timeline": "string",
+          "estimated_value": "string",
+          "returning_client": "boolean",
+          "lead_score": "integer|required",
+          "call_quality": "string",
+          "notes": "string"
+        },
+        "immediateResponse": {
+          "status": "ok",
+          "message": "Lead received for quality processing"
+        }
+      }
+    },
+    
+    {
+      "id": 2,
+      "name": "Quality Validation Gate",
+      "type": "router",
+      "description": "Route based on data quality",
+      "config": {
+        "routes": [
+          {
+            "name": "High Quality Data",
+            "condition": "{{phone_confirmed}} = true AND {{caller_name}} != '' AND {{lead_score}} >= 1",
+            "target": 3
+          },
+          {
+            "name": "Missing Phone Confirmation",
+            "condition": "{{phone_confirmed}} = false OR {{phone_confirmed}} = null",
+            "target": 20,
+            "flag": "phone_unconfirmed"
+          },
+          {
+            "name": "Incomplete Data",
+            "condition": "{{caller_name}} = '' OR {{caller_name}} = null",
+            "target": 21,
+            "flag": "missing_name"
+          }
+        ],
+        "fallback": 3
+      }
+    },
+    
+    {
+      "id": 3,
+      "name": "Phone Number Formatter",
+      "type": "transformer",
+      "config": {
+        "operations": [
+          {
+            "name": "Format UK Mobile",
+            "input": "{{phone_number}}",
+            "output": "formatted_phone",
+            "transformations": [
+              {"type": "replace", "pattern": "\\s+", "replacement": ""},
+              {"type": "replace", "pattern": "^0", "replacement": "+44"},
+              {"type": "replace", "pattern": "^\\+440", "replacement": "+44"},
+              {"type": "validate", "pattern": "^\\+447[0-9]{9}$"}
+            ]
+          },
+          {
+            "name": "Format Postcode",
+            "input": "{{postcode}}",
+            "output": "formatted_postcode",
+            "transformations": [
+              {"type": "uppercase"},
+              {"type": "replace", "pattern": "\\s+", "replacement": " "},
+              {"type": "trim"}
+            ]
+          },
+          {
+            "name": "Clean Name",
+            "input": "{{caller_name}}",
+            "output": "clean_name",
+            "transformations": [
+              {"type": "trim"},
+              {"type": "title_case"}
+            ]
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 4,
+      "name": "Spam Filter",
+      "type": "filter",
+      "config": {
+        "conditions": [
+          {"field": "caller_name", "notContains": ["Marketing", "Sales", "SEO", "Google"]},
+          {"field": "summary", "notContains": ["ranking", "leads", "SEO", "insurance", "PPI"]},
+          {"field": "category", "notEquals": "Spam"}
+        ],
+        "onBlock": {
+          "target": 19,
+          "log": true
+        }
+      }
+    },
+    
+    {
+      "id": 5,
+      "name": "Quality Score Calculator",
+      "type": "calculator",
+      "description": "Calculate comprehensive quality-adjusted lead score (0-100)",
+      "config": {
+        "formula": {
+          "base_score": {
+            "description": "Start with Vapi lead score",
+            "value": "{{lead_score}} * 10"
+          },
+          
+          "project_value_score": {
+            "weights": {
+              "Extension": 20,
+              "Loft Conversion": 20,
+              "Basement": 25,
+              "Full Refurbishment": 22,
+              "Kitchen": 12,
+              "Bathroom": 10,
+              "Plumbing": 6,
+              "Electrics": 8,
+              "Boiler": 5,
+              "Leak": 4,
+              "Structural": 15,
+              "Roofing": 10,
+              "Windows/Doors": 8,
+              "Flooring": 5,
+              "Decorating": 4,
+              "External/Garden": 8,
+              "Multi-trade": 18,
+              "Emergency": 10,
+              "Other": 5
+            },
+            "lookup": "{{project_type}}"
+          },
+          
+          "estimated_value_score": {
+            "weights": {
+              "Over £100k": 20,
+              "£50k-£100k": 18,
+              "£30k-£50k": 14,
+              "£15k-£30k": 10,
+              "£5k-£15k": 6,
+              "Under £5k": 3,
+              "Unknown": 5
+            },
+            "lookup": "{{estimated_value}}"
+          },
+          
+          "location_score": {
+            "premium_postcodes": ["NW3", "NW8", "NW11", "N2", "N6"],
+            "standard_postcodes": ["NW6", "NW1", "NW2", "NW5"],
+            "weights": {
+              "premium": 15,
+              "standard": 8,
+              "other": 0
+            }
+          },
+          
+          "timeline_score": {
+            "weights": {
+              "ASAP": 10,
+              "1-2 weeks": 8,
+              "1 month": 6,
+              "2-3 months": 4,
+              "3-6 months": 2,
+              "6+ months": 1,
+              "Planning stage": 5,
+              "Unknown": 3
+            },
+            "lookup": "{{timeline}}"
+          },
+          
+          "quality_adjustments": {
+            "phone_confirmed": {
+              "true": 10,
+              "false": -15
+            },
+            "returning_client": {
+              "true": 10,
+              "false": 0
+            },
+            "data_completeness": {
+              "has_address": 3,
+              "has_postcode": 3,
+              "has_timeline": 2,
+              "has_notes": 2
+            },
+            "caller_emotion": {
+              "Excited": 5,
+              "Positive": 3,
+              "Neutral": 0,
+              "Concerned": -2,
+              "Stressed": 5,
+              "Frustrated": -5
+            }
+          },
+          
+          "final_calculation": "MIN(100, MAX(1, base_score + project_value_score + estimated_value_score + location_score + timeline_score + quality_adjustments))"
+        },
+        "output": {
+          "quality_score": "{{final_calculation}}",
+          "score_breakdown": {
+            "base": "{{base_score}}",
+            "project": "{{project_value_score}}",
+            "value": "{{estimated_value_score}}",
+            "location": "{{location_score}}",
+            "timeline": "{{timeline_score}}",
+            "quality": "{{quality_adjustments}}"
+          }
+        }
+      }
+    },
+    
+    {
+      "id": 6,
+      "name": "Data Enrichment",
+      "type": "enricher",
+      "config": {
+        "enrichments": [
+          {
+            "field": "area_name",
+            "source": "postcode_lookup",
+            "mapping": {
+              "NW3": "Hampstead / Belsize Park",
+              "NW6": "West Hampstead / Kilburn",
+              "NW8": "St John's Wood",
+              "NW11": "Golders Green / Hampstead Garden Suburb",
+              "NW1": "Camden / Regent's Park",
+              "NW2": "Cricklewood",
+              "NW5": "Kentish Town",
+              "N2": "East Finchley",
+              "N6": "Highgate"
+            }
+          },
+          {
+            "field": "lead_temperature",
+            "calculation": {
+              "hot": "quality_score >= 70",
+              "warm": "quality_score >= 40 AND quality_score < 70",
+              "cool": "quality_score < 40"
+            }
+          },
+          {
+            "field": "recommended_callback",
+            "rules": [
+              {"condition": "category = 'Emergency'", "value": "Within 15 minutes"},
+              {"condition": "quality_score >= 80", "value": "Within 30 minutes"},
+              {"condition": "quality_score >= 60", "value": "Within 1 hour"},
+              {"condition": "quality_score >= 40", "value": "Same day"},
+              {"default": "Next business day"}
+            ]
+          },
+          {
+            "field": "timestamp",
+            "value": "{{now | date: '%Y-%m-%d %H:%M:%S'}}"
+          },
+          {
+            "field": "priority_label",
+            "rules": [
+              {"condition": "category = 'Emergency'", "value": "🚨 EMERGENCY"},
+              {"condition": "quality_score >= 80", "value": "🔥 HOT LEAD"},
+              {"condition": "returning_client = true", "value": "⭐ RETURNING CLIENT"},
+              {"condition": "quality_score >= 60", "value": "📈 HIGH PRIORITY"},
+              {"condition": "quality_score >= 40", "value": "📋 STANDARD"},
+              {"default": "📝 LOW PRIORITY"}
+            ]
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 7,
+      "name": "Priority Router",
+      "type": "router",
+      "config": {
+        "routes": [
+          {
+            "name": "Emergency",
+            "condition": "{{category}} = 'Emergency'",
+            "target": 10,
+            "parallel": true
+          },
+          {
+            "name": "Hot Lead",
+            "condition": "{{quality_score}} >= 70",
+            "target": 11,
+            "parallel": true
+          },
+          {
+            "name": "Returning Client",
+            "condition": "{{returning_client}} = true",
+            "target": 12,
+            "parallel": true
+          },
+          {
+            "name": "High Priority",
+            "condition": "{{quality_score}} >= 50",
+            "target": 13,
+            "parallel": true
+          },
+          {
+            "name": "Standard",
+            "condition": "{{quality_score}} >= 25",
+            "target": 14
+          },
+          {
+            "name": "Low Priority",
+            "default": true,
+            "target": 15
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 10,
+      "name": "Emergency Alert",
+      "type": "parallel_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "template": "emergency_lead_v4",
+            "message": "🚨 *EMERGENCY CALL*\n\n👤 *{{clean_name}}*\n📞 {{formatted_phone}}\n📍 {{address}}\n\n⚠️ *Issue:* {{summary}}\n\n*Call them within 15 minutes*\n\nPhone confirmed: {{phone_confirmed}}"
+          },
+          {
+            "type": "sms",
+            "to": "+447459345456",
+            "message": "🚨 EMERGENCY: {{clean_name}} - {{summary}}. Call {{formatted_phone}} NOW"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ],
+        "timeout": 10
+      }
+    },
+    
+    {
+      "id": 11,
+      "name": "Hot Lead Alert",
+      "type": "parallel_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "template": "hot_lead_v4",
+            "message": "🔥 *HOT LEAD - Score {{quality_score}}/100*\n\n👤 *{{clean_name}}*\n📞 {{formatted_phone}} ✓\n📍 {{area_name}}\n🏗️ {{project_type}}\n💰 {{estimated_value}}\n⏰ {{timeline}}\n\n📝 *Details:* {{summary}}\n\n{{#if notes}}💡 *Notes:* {{notes}}{{/if}}\n\n*Recommended: Call within 30 mins*"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ],
+        "timeout": 10
+      }
+    },
+    
+    {
+      "id": 12,
+      "name": "Returning Client Alert",
+      "type": "parallel_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "template": "returning_client_v4",
+            "message": "⭐ *RETURNING CLIENT*\n\n👤 *{{clean_name}}*\n📞 {{formatted_phone}} ✓\n📍 {{area_name}}\n\n🏗️ *New request:* {{summary}}\n\n{{#if notes}}💡 {{notes}}{{/if}}\n\n*They know you - prioritise this callback!*"
+          },
+          {
+            "type": "supabase_update",
+            "table": "clients",
+            "key": "phone_number",
+            "data": {"last_contact": "{{timestamp}}", "enquiries_count": "increment"}
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ],
+        "timeout": 10
+      }
+    },
+    
+    {
+      "id": 13,
+      "name": "High Priority Processing",
+      "type": "parallel_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "template": "standard_lead_v4",
+            "message": "📈 *High Priority Lead*\n\n👤 {{clean_name}}\n📞 {{formatted_phone}} {{#if phone_confirmed}}✓{{else}}⚠️{{/if}}\n📍 {{area_name}}\n🏗️ {{project_type}}\n\n📝 {{summary}}\n\nScore: {{quality_score}}/100\n*Call within 1 hour*"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ],
+        "timeout": 10
+      }
+    },
+    
+    {
+      "id": 14,
+      "name": "Standard Processing",
+      "type": "sequential_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          },
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "template": "standard_lead_v4",
+            "message": "📋 *New Enquiry*\n\n👤 {{clean_name}}\n📞 {{formatted_phone}}\n🏗️ {{project_type}}\n\n📝 {{summary}}\n\nScore: {{quality_score}}/100"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 15,
+      "name": "Low Priority Processing",
+      "type": "sequential_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ],
+        "notification": {
+          "type": "daily_digest",
+          "note": "Low priority leads batched for daily summary"
+        }
+      }
+    },
+    
+    {
+      "id": 19,
+      "name": "Spam Handler",
+      "type": "action",
+      "config": {
+        "type": "supabase_insert",
+        "table": "spam_log",
+        "data": {
+          "phone_number": "{{phone_number}}",
+          "caller_name": "{{caller_name}}",
+          "summary": "{{summary}}",
+          "timestamp": "{{timestamp}}"
+        },
+        "then": {
+          "type": "supabase_update",
+          "table": "blocked_numbers",
+          "operation": "upsert",
+          "key": "phone_number",
+          "data": {"blocked_at": "{{timestamp}}", "reason": "spam"}
+        }
+      }
+    },
+    
+    {
+      "id": 20,
+      "name": "Phone Unconfirmed Handler",
+      "type": "action",
+      "description": "Handle leads where phone wasn't confirmed - still process but flag",
+      "config": {
+        "actions": [
+          {
+            "type": "enricher",
+            "field": "quality_warning",
+            "value": "⚠️ Phone number NOT confirmed by caller"
+          },
+          {
+            "type": "adjust_score",
+            "operation": "subtract",
+            "value": 15
+          },
+          {
+            "type": "continue",
+            "target": 3,
+            "note": "Continue processing with reduced score and warning"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 21,
+      "name": "Missing Name Handler",
+      "type": "action",
+      "description": "Handle leads with missing name",
+      "config": {
+        "actions": [
+          {
+            "type": "enricher",
+            "field": "caller_name",
+            "value": "Unknown Caller"
+          },
+          {
+            "type": "enricher",
+            "field": "quality_warning",
+            "value": "⚠️ Caller did not provide name"
+          },
+          {
+            "type": "continue",
+            "target": 3
+          }
+        ]
+      }
+    }
+  ],
+  
+  "qualityFeatures": {
+    "phoneConfirmationTracking": {
+      "enabled": true,
+      "alertOnUnconfirmed": true,
+      "scoreImpact": -15
+    },
+    "dataCompletenessTracking": {
+      "enabled": true,
+      "minimumFields": ["caller_name", "phone_number", "category", "summary"],
+      "bonusFields": ["address", "postcode", "timeline", "notes"]
+    },
+    "callQualityLogging": {
+      "enabled": true,
+      "trackField": "call_quality",
+      "alertOnDifficult": true
+    },
+    "emotionTracking": {
+      "enabled": true,
+      "trackField": "caller_emotion",
+      "alertOnStressed": true,
+      "alertOnFrustrated": true
+    }
+  },
+  
+  "supabaseSchema": {
+    "leads": {
+      "additionalColumns": [
+        {"name": "phone_confirmed", "type": "boolean", "default": false},
+        {"name": "caller_emotion", "type": "text"},
+        {"name": "call_quality", "type": "text"},
+        {"name": "quality_score", "type": "integer"},
+        {"name": "quality_warning", "type": "text"},
+        {"name": "score_breakdown", "type": "jsonb"}
+      ]
+    }
+  },
+  
+  "errorHandling": {
+    "onWebhookTimeout": {
+      "action": "retry",
+      "maxRetries": 2,
+      "backoff": "exponential"
+    },
+    "onSupabaseError": {
+      "action": "queue",
+      "fallbackNotification": true
+    },
+    "onWhatsAppError": {
+      "action": "fallback_sms",
+      "alertAdmin": true
+    }
+  },
+  
+  "analytics": {
+    "track": [
+      "leads_by_quality_score",
+      "phone_confirmation_rate",
+      "data_completeness_average",
+      "caller_emotion_distribution",
+      "conversion_by_score_range",
+      "response_times",
+      "quality_trend_over_time"
+    ],
+    "dashboardUrl": "{{SUPABASE_DASHBOARD_URL}}"
+  },
+  
+  "metadata": {
+    "version": "4.5.0",
+    "codename": "QUALITY",
+    "updated": "2025-11-30",
+    "qualityImprovements": [
+      "Phone confirmation validation gate",
+      "Caller emotion tracking and routing",
+      "Call quality assessment",
+      "Data completeness scoring",
+      "Quality-adjusted lead scoring",
+      "Warning flags for data issues",
+      "Enhanced WhatsApp message templates",
+      "Returning client prioritization",
+      "Score breakdown logging"
+    ]
+  }
+}

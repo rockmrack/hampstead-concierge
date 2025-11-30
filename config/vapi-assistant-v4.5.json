@@ -1,0 +1,622 @@
+{
+  "name": "Hampstead Receptionist - Sarah v4.5 QUALITY",
+  "description": "Human-grade conversation quality with 5x accuracy, empathy, and reliability improvements",
+  "version": "4.5.0",
+  "codename": "QUALITY",
+  
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "fallbackModels": ["gpt-4o", "gpt-3.5-turbo"],
+    "temperature": 0.5,
+    "maxTokens": 200,
+    "topP": 0.92,
+    "frequencyPenalty": 0.4,
+    "presencePenalty": 0.2,
+    
+    "semanticCachingEnabled": true,
+    "numFastTurns": 5,
+    "emotionRecognitionEnabled": true,
+    
+    "qualityEnhancements": {
+      "conversationalTone": {
+        "enabled": true,
+        "style": "warm_professional",
+        "useContractions": true,
+        "avoidRoboticPhrases": [
+          "I understand you are",
+          "I am here to",
+          "How may I assist",
+          "Is there anything else"
+        ],
+        "preferredPhrases": [
+          "I understand",
+          "Of course",
+          "Lovely",
+          "That sounds",
+          "Let me just"
+        ]
+      },
+      
+      "empathyEngine": {
+        "enabled": true,
+        "emotionResponses": {
+          "excited": {
+            "detect": ["can't wait", "so excited", "finally", "dream"],
+            "respond": "enthusiasm_match",
+            "phrases": ["That sounds wonderful!", "How exciting!", "Ross loves these projects!"]
+          },
+          "stressed": {
+            "detect": ["worried", "stressed", "nightmare", "disaster", "help"],
+            "respond": "reassurance",
+            "phrases": ["I completely understand", "Let's get this sorted", "Ross will help"]
+          },
+          "frustrated": {
+            "detect": ["already told", "again", "third time", "nobody"],
+            "respond": "validation",
+            "phrases": ["I'm sorry to hear that", "Let me make sure Ross calls you personally"]
+          },
+          "uncertain": {
+            "detect": ["not sure", "don't know", "maybe", "possibly"],
+            "respond": "guidance",
+            "phrases": ["No problem at all", "Ross can advise", "He'll talk through options"]
+          }
+        }
+      },
+      
+      "contextMemory": {
+        "enabled": true,
+        "rememberWithinCall": [
+          "caller_name",
+          "mentioned_details",
+          "emotional_state",
+          "previous_statements"
+        ],
+        "preventRepetition": true,
+        "useNaturalCallbacks": true
+      },
+      
+      "responseVariation": {
+        "enabled": true,
+        "avoidRepeating": true,
+        "synonymGroups": {
+          "confirmation": ["Lovely", "Perfect", "Wonderful", "Great", "Excellent"],
+          "understanding": ["I understand", "I see", "Of course", "Absolutely"],
+          "thanks": ["Thank you", "Thanks so much", "That's helpful"]
+        }
+      }
+    },
+    
+    "responsePredictor": {
+      "enabled": true,
+      "prefetchCount": 3,
+      "commonPaths": [
+        {"trigger": "greeting", "responses": ["warm_welcome", "purpose_inquiry"]},
+        {"trigger": "name_given", "responses": ["name_acknowledgment", "phone_request"]},
+        {"trigger": "renovation_mentioned", "responses": ["enthusiasm", "detail_inquiry"]},
+        {"trigger": "emergency_detected", "responses": ["empathy_urgent", "fast_data"]},
+        {"trigger": "stress_detected", "responses": ["reassurance", "take_control"]}
+      ]
+    },
+    
+    "contextCompression": {
+      "enabled": true,
+      "strategy": "semantic_summary",
+      "maxContextTokens": 1200,
+      "compressionRatio": 0.5,
+      "preserveEmotionalContext": true
+    },
+    
+    "intentClassifier": {
+      "enabled": true,
+      "model": "enhanced",
+      "intents": [
+        "greeting", "provide_name", "provide_phone", "provide_address",
+        "describe_project", "ask_renovation", "ask_maintenance", "report_emergency",
+        "express_concern", "ask_price", "ask_availability", "ask_timeline",
+        "mention_budget", "mention_previous_work", "complaint", "spam", 
+        "confusion", "gratitude", "goodbye"
+      ],
+      "confidenceThreshold": 0.82,
+      "emotionDetection": true
+    },
+    
+    "entityExtractor": {
+      "enabled": true,
+      "entities": [
+        {"type": "PERSON", "field": "caller_name", "validation": "non_empty"},
+        {"type": "PHONE", "field": "phone_number", "format": "uk_mobile", "validation": "11_digits"},
+        {"type": "ADDRESS", "field": "address", "requireStreet": true},
+        {"type": "POSTCODE", "field": "postcode", "pattern": "^[A-Z]{1,2}[0-9R][0-9A-Z]?\\s?[0-9][A-Z]{2}$"},
+        {"type": "PROJECT", "field": "project_type", "categories": 18},
+        {"type": "MONEY", "field": "budget_hint", "currency": "GBP"},
+        {"type": "DATE", "field": "timeline_hint"},
+        {"type": "EMOTION", "field": "caller_mood"}
+      ],
+      "crossValidation": true
+    }
+  },
+
+  "voice": {
+    "provider": "elevenlabs",
+    "voiceId": "EXAVITQu4vr4xnSDxMaL",
+    "model": "eleven_turbo_v2_5",
+    "stability": 0.55,
+    "similarityBoost": 0.80,
+    "style": 0.15,
+    "useSpeakerBoost": true,
+    "optimizeStreamingLatency": 3,
+    
+    "voiceQuality": {
+      "naturalPauses": true,
+      "breathSimulation": true,
+      "emotionalRange": "medium",
+      "paceVariation": true
+    },
+    
+    "chunkPlan": {
+      "enabled": true,
+      "minCharacters": 12,
+      "punctuationBoundaries": [".", "!", "?", ",", ";", ":", "—", "..."],
+      "naturalBreaks": true,
+      "formatPlan": {
+        "enabled": true,
+        "numberToDigitsCutoff": 2030,
+        "phoneFormatting": "spoken_groups"
+      }
+    },
+    
+    "inputPreprocessing": {
+      "enabled": true,
+      "rules": [
+        {"pattern": "(\\d)(\\d)(\\d)(\\d)", "replacement": "$1 $2 $3 $4", "context": "phone"},
+        {"pattern": "NW(\\d+)", "replacement": "N W $1"},
+        {"pattern": "([A-Z]{1,2}\\d+)\\s*(\\d[A-Z]{2})", "replacement": "$1, $2", "context": "postcode"}
+      ]
+    },
+    
+    "fallbackPlan": {
+      "voices": [
+        {"provider": "deepgram", "voiceId": "aura-athena-en", "quality": "high"},
+        {"provider": "cartesia", "voiceId": "british-lady", "quality": "medium"},
+        {"provider": "openai", "voiceId": "nova", "quality": "high"}
+      ],
+      "strategy": "quality-first"
+    },
+    
+    "prosodyControl": {
+      "enabled": true,
+      "rules": [
+        {"context": "phone_readback", "rate": "0.85", "pitch": "+3%", "pause_after": "300ms"},
+        {"context": "name_use", "rate": "0.95", "emphasis": "moderate"},
+        {"context": "reassurance", "rate": "0.9", "pitch": "-5%", "warmth": "high"},
+        {"context": "confirmation", "rate": "1.0", "pitch": "0%"},
+        {"context": "urgency_response", "rate": "1.1", "pitch": "+5%"},
+        {"context": "closing", "rate": "0.95", "warmth": "high"}
+      ]
+    }
+  },
+
+  "transcriber": {
+    "provider": "deepgram",
+    "model": "nova-2",
+    "language": "en-GB",
+    "smartFormat": true,
+    "punctuate": true,
+    "profanityFilter": false,
+    "redact": false,
+    "diarize": false,
+    "multichannel": false,
+    "alternatives": 3,
+    "endpointing": 280,
+    "interimResults": true,
+    "utteranceEndMs": 900,
+    "vadEvents": true,
+    
+    "accuracyEnhancements": {
+      "phoneNumberMode": {
+        "enabled": true,
+        "format": "uk_mobile",
+        "validation": "strict",
+        "retryOnInvalid": true
+      },
+      "postcodeMode": {
+        "enabled": true,
+        "ukFormat": true,
+        "autocorrect": true
+      },
+      "nameMode": {
+        "enabled": true,
+        "titleCase": true,
+        "commonCorrections": {
+          "ross": "Ross",
+          "hampstead": "Hampstead"
+        }
+      }
+    },
+    
+    "wordBoost": {
+      "enabled": true,
+      "intensifier": 2.5,
+      "words": [
+        "Hampstead", "Belsize", "Swiss Cottage", "Primrose Hill", "St John's Wood",
+        "Highgate", "Kentish Town", "Camden", "Kilburn", "West Hampstead",
+        "NW3", "NW6", "NW8", "NW11", "NW1", "NW2", "NW5", "N2", "N6", "N19",
+        "Finchley Road", "Haverstock Hill", "Heath Street", "Flask Walk",
+        "Arkwright Road", "Belsize Park", "England's Lane", "South End Green",
+        "renovation", "extension", "loft", "basement", "refurbishment", "conversion",
+        "kitchen", "bathroom", "boiler", "plumbing", "electrics", "rewire",
+        "leak", "emergency", "urgent", "flooding", "burst", "damp",
+        "Ross", "Sarah", "Hampstead Renovations",
+        "architect", "planning", "party wall", "building control", "structural"
+      ]
+    },
+    
+    "customVocabulary": {
+      "enabled": true,
+      "phrases": [
+        {"phrase": "Hampstead Renovations", "boost": 10},
+        {"phrase": "loft conversion", "boost": 9},
+        {"phrase": "rear extension", "boost": 9},
+        {"phrase": "side return extension", "boost": 9},
+        {"phrase": "basement dig out", "boost": 8},
+        {"phrase": "basement conversion", "boost": 8},
+        {"phrase": "full house refurbishment", "boost": 8},
+        {"phrase": "planning permission", "boost": 7},
+        {"phrase": "party wall agreement", "boost": 7},
+        {"phrase": "structural engineer", "boost": 7},
+        {"phrase": "building regulations", "boost": 7},
+        {"phrase": "building control", "boost": 7},
+        {"phrase": "project manager", "boost": 6},
+        {"phrase": "interior designer", "boost": 6},
+        {"phrase": "oh seven", "boost": 8},
+        {"phrase": "zero seven", "boost": 8}
+      ]
+    },
+    
+    "noiseReduction": {
+      "enabled": true,
+      "level": "adaptive",
+      "preserveVoice": true,
+      "echoCancellation": true,
+      "backgroundSuppression": "high"
+    },
+    
+    "clarificationTriggers": {
+      "enabled": true,
+      "triggers": [
+        {"condition": "phone_incomplete", "action": "request_repeat"},
+        {"condition": "name_unclear", "action": "request_spelling"},
+        {"condition": "address_partial", "action": "request_street"},
+        {"condition": "low_confidence", "action": "request_clarification"}
+      ]
+    }
+  },
+
+  "conversationFlow": {
+    "stateManagement": {
+      "enabled": true,
+      "states": [
+        "greeting", "initial_listen", "understanding_need",
+        "collecting_name", "collecting_phone", "confirming_phone",
+        "collecting_address", "clarifying_details",
+        "categorizing", "empathizing", "reassuring",
+        "summarizing", "confirming", "closing", "terminated"
+      ],
+      "transitions": {
+        "greeting": {
+          "caller_explains": "initial_listen",
+          "caller_silent": "understanding_need"
+        },
+        "initial_listen": {
+          "need_understood": "collecting_name",
+          "need_unclear": "clarifying_details",
+          "emergency_detected": "empathizing"
+        },
+        "collecting_name": {
+          "name_captured": "collecting_phone"
+        },
+        "collecting_phone": {
+          "phone_captured": "confirming_phone"
+        },
+        "confirming_phone": {
+          "phone_confirmed": "collecting_address",
+          "phone_incorrect": "collecting_phone"
+        },
+        "collecting_address": {
+          "address_captured": "categorizing",
+          "address_refused": "categorizing"
+        },
+        "categorizing": {
+          "high_value": "empathizing",
+          "standard": "summarizing",
+          "emergency": "empathizing"
+        },
+        "empathizing": {
+          "acknowledged": "summarizing"
+        },
+        "summarizing": {
+          "summary_complete": "confirming"
+        },
+        "confirming": {
+          "confirmed": "closing"
+        },
+        "closing": {
+          "function_called": "terminated"
+        }
+      }
+    },
+    
+    "qualityGates": {
+      "beforeClosing": {
+        "required": ["caller_name", "phone_number_confirmed", "category", "need_understood"],
+        "recommended": ["address", "postcode", "timeline"],
+        "onMissing": "attempt_collection"
+      }
+    },
+    
+    "dataValidation": {
+      "phone_number": {
+        "pattern": "^(\\+44|0)7[0-9]{9}$",
+        "mustConfirm": true,
+        "confirmationMethod": "read_back_digits"
+      },
+      "postcode": {
+        "pattern": "^[A-Z]{1,2}[0-9R][0-9A-Z]?\\s?[0-9][A-Z]{2}$",
+        "autocorrect": true,
+        "confirmIfUncertain": true
+      }
+    },
+    
+    "shortcuts": {
+      "enabled": true,
+      "rules": [
+        {"condition": "returning_client", "action": "personalized_greeting", "skipFields": ["name", "address"]},
+        {"condition": "emergency_detected", "action": "fast_track", "priority": "immediate"},
+        {"condition": "spam_detected", "action": "polite_termination", "maxDuration": 10}
+      ]
+    },
+    
+    "recoveryStrategies": {
+      "confusion": {
+        "detect": ["what", "sorry", "don't understand", "confused"],
+        "response": "Let me explain - I'm Sarah, and I help connect callers with Ross for renovation and building work. How can I help you today?"
+      },
+      "frustration": {
+        "detect": ["already said", "told you", "listen"],
+        "response": "I apologise - let me make sure I have this right. [summarize what you know]"
+      },
+      "silence": {
+        "afterSeconds": 5,
+        "response": "Are you still there? I'm here to help whenever you're ready."
+      }
+    }
+  },
+
+  "firstMessage": "Good afternoon, Hampstead Renovations. This is Sarah, how may I help you today?",
+  "firstMessageMode": "assistant-speaks-first-with-model-generated-message",
+  
+  "silenceTimeoutSeconds": 20,
+  "maxDurationSeconds": 480,
+  "backgroundSound": "off",
+  "backchannelingEnabled": true,
+  "backgroundDenoisingEnabled": true,
+  "modelOutputInMessagesEnabled": true,
+
+  "startSpeakingPlan": {
+    "waitSeconds": 0.25,
+    "smartEndpointingEnabled": true,
+    "customEndpointingRules": [
+      {"type": "transcriptEndpointing", "timeoutSeconds": 0.35, "regex": "\\d{10,11}$", "description": "phone_complete"},
+      {"type": "transcriptEndpointing", "timeoutSeconds": 0.3, "regex": "(yes|no|yeah|yep|nope|ok|okay|sure|right|fine|correct|that's right)$", "description": "confirmation"},
+      {"type": "transcriptEndpointing", "timeoutSeconds": 0.45, "regex": "(NW[0-9]{1,2}|N[0-9]{1,2}|[A-Z]{1,2}[0-9]+\\s?[0-9][A-Z]{2})$", "description": "postcode"},
+      {"type": "transcriptEndpointing", "timeoutSeconds": 0.5, "regex": "(please|thanks|thank you|cheers|ta)$", "description": "politeness"},
+      {"type": "transcriptEndpointing", "timeoutSeconds": 0.25, "regex": "(emergency|urgent|help|flooding|burst|leak)$", "description": "urgency"}
+    ],
+    "transcriptionEndpointingPlan": {
+      "onPunctuationSeconds": 0.08,
+      "onNoPunctuationSeconds": 0.9,
+      "onNumberSeconds": 0.5
+    }
+  },
+
+  "stopSpeakingPlan": {
+    "numWords": 1,
+    "voiceSeconds": 0.15,
+    "backoffSeconds": 0.7
+  },
+
+  "interruptionHandling": {
+    "enabled": true,
+    "sensitivity": "medium",
+    "onInterruption": {
+      "stopImmediately": true,
+      "acknowledgment": "brief",
+      "resumeStrategy": "contextual"
+    }
+  },
+
+  "transportConfigurations": [
+    {
+      "provider": "twilio",
+      "timeout": 60,
+      "record": true,
+      "recordingChannels": "dual"
+    }
+  ],
+
+  "serverUrl": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+  "serverUrlSecret": "YOUR_SECRET_HERE",
+  
+  "endCallFunctionEnabled": true,
+  "endCallMessage": "Thank you so much for calling Hampstead Renovations. Goodbye!",
+  "recordingEnabled": true,
+  "videoRecordingEnabled": false,
+
+  "clientMessages": [
+    "conversation-update", "function-call", "hang", "model-output",
+    "speech-update", "status-update", "transcript", "tool-calls",
+    "user-interrupted", "voice-input"
+  ],
+  
+  "serverMessages": [
+    "conversation-update", "end-of-call-report", "function-call", "hang",
+    "speech-update", "status-update", "tool-calls", "transfer-destination-request",
+    "user-interrupted"
+  ],
+
+  "callerRecognition": {
+    "enabled": true,
+    "method": "phone_lookup",
+    "database": "supabase",
+    "onRecognized": {
+      "greeting": "Good {{timeOfDay}}, Hampstead Renovations... Oh, hello {{stored_name}}! Lovely to hear from you again. How can I help you today?",
+      "prefillFields": ["caller_name", "address", "postcode"],
+      "flagAsReturning": true,
+      "priorityBoost": 15
+    },
+    "onNotRecognized": {
+      "action": "standard_flow"
+    }
+  },
+
+  "artifactPlan": {
+    "recordingEnabled": true,
+    "videoRecordingEnabled": false,
+    "transcriptPlan": {
+      "enabled": true,
+      "assistantName": "Sarah",
+      "userName": "Caller",
+      "includeTimestamps": true,
+      "includeEmotionTags": true
+    },
+    "recordingPath": "recordings/{{call.id}}.wav"
+  },
+
+  "analysisPlan": {
+    "summaryPrompt": "Write a natural one-sentence summary: [Name] from [area] called about [their need]. Include any important context (urgency, emotion, special requirements).",
+    "summaryRequestTimeoutSeconds": 12,
+    
+    "structuredDataPrompt": "Extract all information shared by the caller. Score the lead based on: project_value(35%), timeline_urgency(20%), location_premium(20%), caller_engagement(15%), data_completeness(10%). Also assess conversation quality.",
+    "structuredDataRequestTimeoutSeconds": 12,
+    "structuredDataSchema": {
+      "type": "object",
+      "properties": {
+        "caller_name": {"type": "string", "description": "Full name as provided"},
+        "phone_number": {"type": "string", "description": "UK format with +44 or 07"},
+        "phone_confirmed": {"type": "boolean", "description": "Was number read back and confirmed?"},
+        "address": {"type": "string", "description": "Full address if provided"},
+        "postcode": {"type": "string", "description": "Postcode district or full postcode"},
+        "project_type": {"type": "string"},
+        "project_scope": {"type": "string", "enum": ["minor", "small", "medium", "large", "major"]},
+        "project_description": {"type": "string", "description": "Detailed description of what they want"},
+        "urgency_level": {"type": "integer", "minimum": 1, "maximum": 5},
+        "caller_emotion": {"type": "string", "enum": ["very_positive", "positive", "neutral", "concerned", "stressed", "frustrated"]},
+        "estimated_value": {"type": "string", "enum": ["under_5k", "5k_15k", "15k_30k", "30k_50k", "50k_100k", "over_100k"]},
+        "lead_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "conversion_probability": {"type": "number", "minimum": 0, "maximum": 1},
+        "is_spam": {"type": "boolean"},
+        "is_returning_client": {"type": "boolean"},
+        "data_completeness": {"type": "number", "minimum": 0, "maximum": 1},
+        "call_quality_score": {"type": "integer", "minimum": 1, "maximum": 10, "description": "How well did the conversation go?"},
+        "empathy_score": {"type": "integer", "minimum": 1, "maximum": 10, "description": "How well were emotions acknowledged?"},
+        "recommended_followup": {"type": "string", "enum": ["immediate", "within_hour", "same_day", "next_day", "low_priority"]},
+        "special_notes": {"type": "string", "description": "Architect involved, planning status, access issues, etc."},
+        "callback_preference": {"type": "string", "description": "Any stated preferences for callback time"}
+      },
+      "required": ["caller_name", "phone_number", "phone_confirmed", "project_type", "lead_score", "call_quality_score"]
+    },
+    
+    "successEvaluationPrompt": "Score the call 1-10 on: (1) Warm, professional greeting (2) Active listening - let them explain (3) Empathy shown to emotions (4) Efficient data collection (5) Phone number confirmed correctly (6) Clear callback expectation set (7) Natural conversational tone (8) Appropriate pacing (9) Used caller's name (10) Warm closing. Deduct for: robotic responses, interrupting, forgetting info they shared, rushed feeling.",
+    "successEvaluationRubric": "NumericScale",
+    "successEvaluationRequestTimeoutSeconds": 12
+  },
+
+  "qualityMetrics": {
+    "track": [
+      "phone_confirmation_rate",
+      "data_completeness_avg",
+      "call_quality_score_avg",
+      "empathy_score_avg",
+      "caller_satisfaction_proxy",
+      "repeat_information_requests",
+      "conversation_naturalness"
+    ],
+    "targets": {
+      "phone_confirmation_rate": 0.98,
+      "data_completeness_avg": 0.85,
+      "call_quality_score_avg": 8.0,
+      "empathy_score_avg": 7.5
+    }
+  },
+
+  "hooks": {
+    "onCallStart": {
+      "actions": [
+        {"type": "lookup", "source": "supabase", "table": "clients", "key": "phone_number"},
+        {"type": "set_time_greeting"},
+        {"type": "log", "data": {"event": "call_started", "timestamp": "{{now}}"}}
+      ]
+    },
+    "onCallEnd": {
+      "action": "webhook",
+      "url": "https://hook.eu1.make.com/YOUR_ANALYTICS_WEBHOOK",
+      "data": {
+        "call_id": "{{call.id}}",
+        "duration": "{{call.duration}}",
+        "outcome": "{{call.endedReason}}",
+        "lead_score": "{{analysis.lead_score}}",
+        "call_quality_score": "{{analysis.call_quality_score}}",
+        "empathy_score": "{{analysis.empathy_score}}",
+        "data_completeness": "{{analysis.data_completeness}}",
+        "phone_confirmed": "{{analysis.phone_confirmed}}"
+      }
+    },
+    "onFunctionCall": {
+      "action": "log",
+      "data": {"function": "{{function.name}}", "success": "{{function.success}}"}
+    },
+    "onError": {
+      "action": "graceful_recovery",
+      "fallbackMessage": "I'm sorry, I'm having a small technical issue. Could you bear with me for just a moment?"
+    }
+  },
+
+  "performanceTargets": {
+    "firstResponseLatencyMs": 180,
+    "turnTakingLatencyMs": 120,
+    "functionCallTimeoutMs": 6000,
+    "totalCallDurationTarget": 150,
+    "dataCompletenessTarget": 0.85,
+    "phoneConfirmationTarget": 0.98,
+    "callQualityTarget": 8.0,
+    "empathyScoreTarget": 7.5
+  },
+
+  "metadata": {
+    "business": "Hampstead Renovations",
+    "location": "250 Finchley Road, London",
+    "director": "Ross",
+    "directorMobile": "+447459345456",
+    "serviceAreas": ["NW3", "NW6", "NW8", "NW11", "N2", "N6", "NW1", "NW2", "NW5", "N19"],
+    "version": "4.5.0",
+    "codename": "QUALITY",
+    "lastUpdated": "2025-11-30",
+    "qualityImprovements": [
+      "Human-grade conversational tone",
+      "Empathy engine with emotion detection",
+      "Mandatory phone number confirmation",
+      "Response variation to avoid repetition",
+      "Context memory within call",
+      "Natural speech patterns (contractions)",
+      "Caller emotion tracking",
+      "Recovery strategies for confusion",
+      "Quality scoring on every call",
+      "Enhanced transcription accuracy",
+      "Warmer voice settings (stability 0.55)",
+      "Longer pauses for naturalness",
+      "Interruption handling improvement",
+      "Clarification triggers for unclear input"
+    ]
+  }
+}
