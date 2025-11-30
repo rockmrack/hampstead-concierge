@@ -1,0 +1,42 @@
+{
+  "description": "Emergency call - triggers Route B (Urgent WhatsApp + Email + Database)",
+  "message": {
+    "type": "function-call",
+    "functionCall": {
+      "name": "log_lead_details",
+      "parameters": {
+        "caller_name": "Sarah Thompson",
+        "phone_number": "+447459111222",
+        "category": "Emergency",
+        "address": "15 Belsize Lane, NW3",
+        "summary": "Water leak from flat above causing water to pour through kitchen ceiling. Upstairs neighbour has turned off water supply. Returning client - Ross did their bathroom last year.",
+        "sentiment": "Angry/Urgent",
+        "postcode_area": "NW3",
+        "project_type": "Leak",
+        "timeline": "Urgent/ASAP",
+        "estimated_scope": "Unknown",
+        "is_returning_client": true,
+        "additional_notes": "Previous client. Water currently stopped but damage to ceiling. Needs urgent assessment."
+      }
+    }
+  },
+  "call": {
+    "id": "call_emergency_789",
+    "orgId": "org_hampstead",
+    "createdAt": "2025-11-30T19:45:00.000Z",
+    "endedAt": "2025-11-30T19:47:30.000Z",
+    "phoneNumber": "+447459111222",
+    "transcript": "Sarah: Good evening, Hampstead Renovations. Sarah speaking, how may I help you?\n\nCaller: Hi, we've got water coming through our ceiling! The flat above has had a leak and it's coming into our kitchen. We had Ross do our bathroom last year.\n\nSarah: Oh no, I'm so sorry to hear that. Let me get your details to Ross immediately. Can I confirm your name?\n\nCaller: It's Sarah Thompson, we're at 15 Belsize Lane.\n\nSarah: Of course, Mrs Thompson. And your mobile number?\n\nCaller: 07459 111222.\n\nSarah: That's oh-seven-four-five-nine, one-one-one, two-two-two. I've flagged this as urgent. Have you been able to turn off the water supply?\n\nCaller: Yes, the upstairs neighbour has.\n\nSarah: Good. Ross will call you back within 15 minutes. In the meantime, try to catch what you can with towels and containers.\n\nCaller: Thank you so much.\n\nSarah: Thank you for calling Hampstead Renovations. Goodbye.",
+    "durationSeconds": 150
+  },
+  "expected_result": {
+    "whatsapp_sent": true,
+    "whatsapp_recipient": "+447459345456",
+    "whatsapp_message_type": "URGENT",
+    "email_sent": true,
+    "email_recipients": ["office@hampsteadrenovations.com", "ross@hampsteadrenovations.com"],
+    "database_entry": true,
+    "priority": "critical",
+    "route": "B - Emergency"
+  }
+}

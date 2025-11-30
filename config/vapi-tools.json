@@ -1,0 +1,212 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "log_lead_details",
+        "description": "CRITICAL: Call this function when the caller has provided their name, phone number, and details about their enquiry. This sends the lead information directly to Ross's WhatsApp for immediate follow-up. Must be called before ending any genuine enquiry call.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "The name of the caller as they provided it (first name alone is acceptable)"
+            },
+            "phone_number": {
+              "type": "string",
+              "description": "The caller's mobile phone number. Format: +447XXXXXXXXX or 07XXXXXXXXX. This is REQUIRED for callback."
+            },
+            "category": {
+              "type": "string",
+              "enum": ["Renovation", "Maintenance", "Emergency", "Other"],
+              "description": "The primary category of the enquiry: Renovation (extensions, loft conversions, refurbs), Maintenance (small repairs, fixes), Emergency (flooding, no heat, urgent issues), Other (general enquiries)"
+            },
+            "address": {
+              "type": "string",
+              "description": "The property address where work is needed. Include street name and postcode area if provided (e.g., 'Elm Row, NW3' or '42 Belsize Lane, Hampstead')"
+            },
+            "summary": {
+              "type": "string",
+              "description": "A concise 1-2 sentence summary of what the caller needs. Be specific about scope and any key details mentioned."
+            },
+            "sentiment": {
+              "type": "string",
+              "enum": ["High Value", "Standard", "Angry/Urgent"],
+              "description": "Lead quality assessment: 'High Value' for large projects (extensions, full refurbs, conversions), 'Standard' for typical maintenance/small works, 'Angry/Urgent' for frustrated callers or emergency situations"
+            },
+            "postcode_area": {
+              "type": "string",
+              "description": "The postcode district if mentioned (NW3, NW6, NW8, NW11, N2, N6, etc.). Leave empty if not specified."
+            },
+            "project_type": {
+              "type": "string",
+              "enum": [
+                "Extension",
+                "Loft Conversion",
+                "Basement",
+                "Full Refurbishment",
+                "Kitchen",
+                "Bathroom",
+                "Plumbing",
+                "Electrics",
+                "Boiler",
+                "Leak",
+                "Structural",
+                "Roofing",
+                "Windows/Doors",
+                "Flooring",
+                "Decorating",
+                "Garden/External",
+                "Other"
+              ],
+              "description": "The specific type of work required"
+            },
+            "timeline": {
+              "type": "string",
+              "enum": [
+                "Urgent/ASAP",
+                "Within 1 month",
+                "1-3 months",
+                "3-6 months",
+                "6+ months",
+                "Planning stage",
+                "Not specified"
+              ],
+              "description": "When the caller wants or needs the work completed"
+            },
+            "estimated_scope": {
+              "type": "string",
+              "enum": ["Small (<£5k)", "Medium (£5k-£20k)", "Large (£20k-£100k)", "Major (£100k+)", "Unknown"],
+              "description": "Estimated project size based on description (do not share this with the caller)"
+            },
+            "is_returning_client": {
+              "type": "boolean",
+              "description": "True if the caller mentioned they have worked with Hampstead Renovations or Ross before"
+            },
+            "additional_notes": {
+              "type": "string",
+              "description": "Any other relevant information: access issues, specific requirements, planning permission status, etc."
+            }
+          },
+          "required": ["caller_name", "phone_number", "category", "summary", "sentiment"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+        "secret": "YOUR_SECRET_HERE",
+        "timeoutSeconds": 20
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "content": ""
+        },
+        {
+          "type": "request-complete",
+          "content": "I've logged your details with Ross."
+        },
+        {
+          "type": "request-failed",
+          "content": "I've made a note of your details."
+        },
+        {
+          "type": "request-response-delayed",
+          "content": "Just one moment while I log this.",
+          "timingMilliseconds": 1000
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "log_spam_call",
+        "description": "Log spam or sales calls that have been filtered. Call this when terminating a spam call to track patterns.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "spam_type": {
+              "type": "string",
+              "enum": [
+                "SEO/Marketing",
+                "Recruitment",
+                "Lead Generation",
+                "Insurance",
+                "Energy/Utilities",
+                "Telecoms",
+                "Financial Services",
+                "IT Services",
+                "Business Services",
+                "Other"
+              ],
+              "description": "The category of spam call"
+            },
+            "company_name": {
+              "type": "string",
+              "description": "The company name if the caller mentioned it"
+            },
+            "pitch_summary": {
+              "type": "string",
+              "description": "Brief summary of what they were selling"
+            }
+          },
+          "required": ["spam_type"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_SPAM_WEBHOOK_ID_HERE",
+        "timeoutSeconds": 10
+      },
+      "messages": [
+        {
+          "type": "request-complete",
+          "content": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "transfer_to_ross",
+        "description": "RARELY USED: Only call this if the caller explicitly demands to speak with Ross immediately and won't accept a callback. This should be avoided as Ross is usually on site.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "type": "string",
+              "description": "Why the caller insists on immediate transfer"
+            },
+            "caller_name": {
+              "type": "string",
+              "description": "The caller's name"
+            },
+            "urgency": {
+              "type": "string",
+              "enum": ["Normal", "High", "Critical"],
+              "description": "How urgent the transfer request is"
+            }
+          },
+          "required": ["reason"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_TRANSFER_WEBHOOK_ID_HERE",
+        "timeoutSeconds": 5
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "content": "Let me see if Ross is available."
+        },
+        {
+          "type": "request-complete",
+          "content": "I'm afraid Ross is currently unavailable. I've flagged your call as urgent and he will call you back as soon as possible."
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "2.0.0",
+    "lastUpdated": "2025-11-30",
+    "description": "Function tools for Hampstead Concierge Voice AI Assistant"
+  }
+}

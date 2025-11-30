@@ -1,0 +1,39 @@
+{
+  "description": "High-value renovation lead - triggers Route A (WhatsApp + Database)",
+  "message": {
+    "type": "function-call",
+    "functionCall": {
+      "name": "log_lead_details",
+      "parameters": {
+        "caller_name": "James Mitchell",
+        "phone_number": "+447700900123",
+        "category": "Renovation",
+        "address": "42 Elm Row, NW3 5BX",
+        "summary": "Complete house renovation including rear extension and loft conversion. Property recently purchased, needs full modernisation. Looking at 4-5 months of work.",
+        "sentiment": "High Value",
+        "postcode_area": "NW3",
+        "project_type": "Full Refurbishment",
+        "timeline": "3-6 months",
+        "estimated_scope": "Major (£100k+)",
+        "is_returning_client": false,
+        "additional_notes": "Architect already engaged. Planning permission submitted."
+      }
+    }
+  },
+  "call": {
+    "id": "call_abc123def456",
+    "orgId": "org_hampstead",
+    "createdAt": "2025-11-30T10:30:00.000Z",
+    "endedAt": "2025-11-30T10:34:22.000Z",
+    "phoneNumber": "+447700900123",
+    "transcript": "Sarah: Good morning, Hampstead Renovations. Sarah speaking, how may I help you?\n\nCaller: Hi, yes, I'm looking to do a complete renovation of my house. We've just bought a place in Hampstead and it needs everything doing.\n\nSarah: How exciting! Congratulations on the new home. May I take your name?\n\nCaller: It's James Mitchell.\n\nSarah: Lovely, James. And what's the property address?\n\nCaller: 42 Elm Row, NW3.\n\nSarah: Perfect, right in the heart of Hampstead. Could you give me a brief idea of the scope - are we talking structural work, or more of a cosmetic refresh?\n\nCaller: Structural. We want to do a rear extension and convert the loft. Probably four to five months of work. We've already got an architect.\n\nSarah: That sounds like a substantial project. And what's the best mobile to reach you on?\n\nCaller: 07700 900123.\n\nSarah: Let me confirm - oh-seven-seven-oh-oh, nine-oh-oh, one-two-three. Perfect. Thank you, James. I've logged this with Ross as a priority. He's currently on a site visit but will call you back within the hour. We very much look forward to discussing your project.\n\nCaller: Thank you. Bye.\n\nSarah: Thank you for calling Hampstead Renovations. Goodbye.",
+    "durationSeconds": 262
+  },
+  "expected_result": {
+    "whatsapp_sent": true,
+    "whatsapp_recipient": "+447459345456",
+    "database_entry": true,
+    "priority": "high",
+    "route": "A - High Value Renovation"
+  }
+}

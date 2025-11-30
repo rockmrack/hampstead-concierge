@@ -1,0 +1,29 @@
+{
+  "description": "Spam call - triggers spam logging (no WhatsApp)",
+  "message": {
+    "type": "function-call",
+    "functionCall": {
+      "name": "log_spam_call",
+      "parameters": {
+        "spam_type": "SEO/Marketing",
+        "company_name": "Digital Marketing Solutions",
+        "pitch_summary": "Offering SEO services to improve Google rankings"
+      }
+    }
+  },
+  "call": {
+    "id": "call_spam_999",
+    "orgId": "org_hampstead",
+    "createdAt": "2025-11-30T11:22:00.000Z",
+    "endedAt": "2025-11-30T11:22:35.000Z",
+    "phoneNumber": "+441onal234567",
+    "transcript": "Sarah: Good morning, Hampstead Renovations. Sarah speaking, how may I help you?\n\nCaller: Hi there, I'm calling from Digital Marketing Solutions. We've noticed your website could rank much higher on Google and—\n\nSarah: I appreciate the call, but we're not looking for any marketing services at the moment. Please do remove us from your list. Thank you. Goodbye.",
+    "durationSeconds": 35
+  },
+  "expected_result": {
+    "whatsapp_sent": false,
+    "database_entry": false,
+    "google_sheet_logged": true,
+    "route": "Spam - No notification"
+  }
+}

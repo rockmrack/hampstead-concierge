@@ -1,0 +1,39 @@
+{
+  "description": "Standard maintenance request - triggers Route C (WhatsApp + Database)",
+  "message": {
+    "type": "function-call",
+    "functionCall": {
+      "name": "log_lead_details",
+      "parameters": {
+        "caller_name": "David Chen",
+        "phone_number": "+447555123456",
+        "category": "Maintenance",
+        "address": "88 West End Lane, NW6",
+        "summary": "Boiler making strange noises and not heating water efficiently. About 8 years old, may need servicing or replacement.",
+        "sentiment": "Standard",
+        "postcode_area": "NW6",
+        "project_type": "Boiler",
+        "timeline": "Within 1 month",
+        "estimated_scope": "Small (<£5k)",
+        "is_returning_client": false,
+        "additional_notes": "British Gas couldn't fit him in for 3 weeks."
+      }
+    }
+  },
+  "call": {
+    "id": "call_maintenance_456",
+    "orgId": "org_hampstead",
+    "createdAt": "2025-11-30T14:15:00.000Z",
+    "endedAt": "2025-11-30T14:18:45.000Z",
+    "phoneNumber": "+447555123456",
+    "transcript": "Sarah: Good afternoon, Hampstead Renovations. Sarah speaking, how may I help you?\n\nCaller: Hi, I've got an issue with my boiler. It's making strange noises and the water isn't getting as hot as it used to.\n\nSarah: I'm sorry to hear that. Let me take some details. May I have your name?\n\nCaller: David Chen.\n\nSarah: Thank you, David. And what's the property address?\n\nCaller: 88 West End Lane, NW6.\n\nSarah: Lovely, that's just down the road from us. How old is the boiler, do you know?\n\nCaller: About 8 years I think. British Gas couldn't get anyone out for 3 weeks.\n\nSarah: I see. And what's the best mobile to reach you on?\n\nCaller: 07555 123456.\n\nSarah: Let me confirm that - oh-seven-five-five-five, one-two-three, four-five-six. Perfect. Thank you, David. I've passed your details to Ross. He'll give you a call back shortly to discuss next steps.\n\nCaller: Great, thanks.\n\nSarah: Thank you for calling Hampstead Renovations. Goodbye.",
+    "durationSeconds": 225
+  },
+  "expected_result": {
+    "whatsapp_sent": true,
+    "whatsapp_recipient": "+447459345456",
+    "database_entry": true,
+    "priority": "medium",
+    "route": "C - Maintenance"
+  }
+}

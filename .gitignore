@@ -1,0 +1,66 @@
+# Hampstead Concierge - Git Ignore
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+config/.env
+
+# API Keys (never commit these!)
+**/secrets/
+**/*_key.txt
+**/*_token.txt
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test outputs
+test-results/
+coverage/
+*.test-output
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build outputs (if any future code is added)
+dist/
+build/
+out/
+
+# Node (if any future automation scripts)
+node_modules/
+package-lock.json
+
+# Python (if any future scripts)
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Backup files
+*.bak
+*.backup
+*_backup*
+
+# Sensitive data that might be exported
+**/exports/
+**/backups/
+transcripts/
+recordings/

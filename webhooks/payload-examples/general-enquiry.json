@@ -1,0 +1,40 @@
+{
+  "description": "General enquiry with high value indicators - triggers Route D with optional WhatsApp",
+  "message": {
+    "type": "function-call",
+    "functionCall": {
+      "name": "log_lead_details",
+      "parameters": {
+        "caller_name": "Margaret Wilson",
+        "phone_number": "+447888999000",
+        "category": "Other",
+        "address": "Hampstead Garden Suburb",
+        "summary": "Called to ask about the company's experience with listed buildings. Has a Grade II listed property and wants to know if Hampstead Renovations handles conservation work.",
+        "sentiment": "High Value",
+        "postcode_area": "NW11",
+        "project_type": "Other",
+        "timeline": "Planning stage",
+        "estimated_scope": "Unknown",
+        "is_returning_client": false,
+        "additional_notes": "Grade II listed property. Mentioned previous bad experience with another builder."
+      }
+    }
+  },
+  "call": {
+    "id": "call_general_321",
+    "orgId": "org_hampstead",
+    "createdAt": "2025-11-30T16:00:00.000Z",
+    "endedAt": "2025-11-30T16:04:15.000Z",
+    "phoneNumber": "+447888999000",
+    "transcript": "Sarah: Good afternoon, Hampstead Renovations. Sarah speaking, how may I help you?\n\nCaller: Hello, I'm calling to make an enquiry. I have a listed building and I wanted to know if you have experience with that sort of work?\n\nSarah: We certainly do work with period and listed properties. May I take your name?\n\nCaller: Margaret Wilson.\n\nSarah: Thank you, Mrs Wilson. And whereabouts is the property?\n\nCaller: It's in Hampstead Garden Suburb, NW11. It's Grade II listed.\n\nSarah: Lovely area. Ross has experience with conservation work and would be the best person to discuss the specifics. What's the best number to reach you on?\n\nCaller: 07888 999000.\n\nSarah: That's oh-seven-eight-eight-eight, nine-nine-nine, oh-oh-oh. Thank you, Mrs Wilson. I've passed your details to Ross. He'll give you a call back to discuss your property and answer any questions about working with listed buildings.\n\nCaller: Thank you, that's very helpful.\n\nSarah: Thank you for calling Hampstead Renovations. Goodbye.",
+    "durationSeconds": 255
+  },
+  "expected_result": {
+    "whatsapp_sent": true,
+    "whatsapp_recipient": "+447459345456",
+    "whatsapp_reason": "Sentiment flagged as High Value",
+    "database_entry": true,
+    "priority": "medium",
+    "route": "D - Other (with High Value flag)"
+  }
+}

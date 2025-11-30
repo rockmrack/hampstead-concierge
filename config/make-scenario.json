@@ -1,0 +1,316 @@
+{
+  "name": "Hampstead Concierge - Lead Router",
+  "description": "Routes incoming leads from Vapi AI Assistant to WhatsApp, Email, and Database",
+  "version": "2.0.0",
+  "trigger": {
+    "type": "webhook",
+    "name": "Vapi Webhook Receiver",
+    "description": "Receives JSON payload from Vapi when log_lead_details function is called",
+    "config": {
+      "method": "POST",
+      "dataStructure": "json",
+      "responseType": "immediate",
+      "responseStatus": 200,
+      "responseBody": {
+        "success": true,
+        "message": "Lead received"
+      }
+    },
+    "expectedPayload": {
+      "message": {
+        "type": "function-call",
+        "functionCall": {
+          "name": "log_lead_details",
+          "parameters": {
+            "caller_name": "string",
+            "phone_number": "string",
+            "category": "string",
+            "address": "string",
+            "summary": "string",
+            "sentiment": "string",
+            "postcode_area": "string",
+            "project_type": "string",
+            "timeline": "string",
+            "estimated_scope": "string",
+            "is_returning_client": "boolean",
+            "additional_notes": "string"
+          }
+        }
+      },
+      "call": {
+        "id": "string",
+        "orgId": "string",
+        "createdAt": "string",
+        "phoneNumber": "string",
+        "transcript": "string"
+      }
+    }
+  },
+  "modules": [
+    {
+      "id": 1,
+      "name": "Parse Webhook Data",
+      "type": "json",
+      "description": "Extract and structure the incoming data",
+      "config": {
+        "extract": {
+          "caller_name": "{{message.functionCall.parameters.caller_name}}",
+          "phone_number": "{{message.functionCall.parameters.phone_number}}",
+          "category": "{{message.functionCall.parameters.category}}",
+          "address": "{{message.functionCall.parameters.address}}",
+          "summary": "{{message.functionCall.parameters.summary}}",
+          "sentiment": "{{message.functionCall.parameters.sentiment}}",
+          "postcode_area": "{{message.functionCall.parameters.postcode_area}}",
+          "project_type": "{{message.functionCall.parameters.project_type}}",
+          "timeline": "{{message.functionCall.parameters.timeline}}",
+          "estimated_scope": "{{message.functionCall.parameters.estimated_scope}}",
+          "is_returning_client": "{{message.functionCall.parameters.is_returning_client}}",
+          "additional_notes": "{{message.functionCall.parameters.additional_notes}}",
+          "call_id": "{{call.id}}",
+          "call_timestamp": "{{call.createdAt}}",
+          "caller_phone_from": "{{call.phoneNumber}}",
+          "transcript": "{{call.transcript}}"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "name": "Router - By Category & Sentiment",
+      "type": "router",
+      "description": "Route leads based on category and sentiment",
+      "routes": [
+        {
+          "name": "Route A - High Value Renovation",
+          "condition": "{{category}} = 'Renovation' OR {{sentiment}} = 'High Value'",
+          "priority": 1,
+          "description": "High-value renovation leads - WhatsApp to Ross immediately"
+        },
+        {
+          "name": "Route B - Emergency",
+          "condition": "{{category}} = 'Emergency' OR {{sentiment}} = 'Angry/Urgent'",
+          "priority": 2,
+          "description": "Emergency calls - WhatsApp to Ross + Email to office"
+        },
+        {
+          "name": "Route C - Maintenance",
+          "condition": "{{category}} = 'Maintenance'",
+          "priority": 3,
+          "description": "Maintenance requests - WhatsApp to Ross + Database log"
+        },
+        {
+          "name": "Route D - Other/General",
+          "condition": "{{category}} = 'Other'",
+          "priority": 4,
+          "description": "General enquiries - Database log only (optional WhatsApp)"
+        }
+      ]
+    }
+  ],
+  "routeConfigurations": {
+    "routeA_highValueRenovation": {
+      "name": "High Value Renovation Lead Handler",
+      "modules": [
+        {
+          "id": "A1",
+          "name": "Send WhatsApp to Ross",
+          "type": "whatsapp",
+          "config": {
+            "to": "+447459345456",
+            "template": "lead_notification",
+            "messageTemplate": "🚨 *NEW LEAD: RENOVATION*\n\n👤 *Name:* {{caller_name}}\n📍 *Address:* {{address}}\n📝 *Note:* {{summary}}\n📞 *Callback:* {{phone_number}}\n🏷️ *Type:* {{project_type}}\n⏰ *Timeline:* {{timeline}}\n💰 *Scope:* {{estimated_scope}}\n📊 *AI Sentiment:* {{sentiment}}\n🔄 *Returning Client:* {{is_returning_client}}\n\n_Received: {{call_timestamp}}_"
+          }
+        },
+        {
+          "id": "A2",
+          "name": "Log to Supabase",
+          "type": "supabase",
+          "config": {
+            "table": "leads",
+            "operation": "insert",
+            "data": {
+              "caller_name": "{{caller_name}}",
+              "phone_number": "{{phone_number}}",
+              "category": "{{category}}",
+              "address": "{{address}}",
+              "summary": "{{summary}}",
+              "sentiment": "{{sentiment}}",
+              "postcode_area": "{{postcode_area}}",
+              "project_type": "{{project_type}}",
+              "timeline": "{{timeline}}",
+              "estimated_scope": "{{estimated_scope}}",
+              "is_returning_client": "{{is_returning_client}}",
+              "additional_notes": "{{additional_notes}}",
+              "call_id": "{{call_id}}",
+              "transcript": "{{transcript}}",
+              "status": "new",
+              "priority": "high",
+              "created_at": "{{call_timestamp}}"
+            }
+          }
+        }
+      ]
+    },
+    "routeB_emergency": {
+      "name": "Emergency Call Handler",
+      "modules": [
+        {
+          "id": "B1",
+          "name": "Send URGENT WhatsApp to Ross",
+          "type": "whatsapp",
+          "config": {
+            "to": "+447459345456",
+            "messageTemplate": "🔴🔴🔴 *EMERGENCY CALL* 🔴🔴🔴\n\n👤 *Name:* {{caller_name}}\n📍 *Address:* {{address}}\n📝 *Issue:* {{summary}}\n📞 *CALL NOW:* {{phone_number}}\n\n⚠️ *URGENT - Callback within 15 mins*\n\n_Received: {{call_timestamp}}_"
+          }
+        },
+        {
+          "id": "B2",
+          "name": "Send Email to Office",
+          "type": "email",
+          "config": {
+            "to": "office@hampsteadrenovations.com",
+            "cc": "ross@hampsteadrenovations.com",
+            "subject": "🚨 EMERGENCY: {{caller_name}} - {{address}}",
+            "bodyTemplate": "EMERGENCY CALL RECEIVED\n\n---\n\nCaller: {{caller_name}}\nPhone: {{phone_number}}\nAddress: {{address}}\n\nIssue:\n{{summary}}\n\n---\n\nSentiment: {{sentiment}}\nTimestamp: {{call_timestamp}}\nCall ID: {{call_id}}\n\n---\n\nFULL TRANSCRIPT:\n{{transcript}}\n\n---\n\nThis is an automated message from Hampstead Concierge AI."
+          }
+        },
+        {
+          "id": "B3",
+          "name": "Log to Supabase - Emergency",
+          "type": "supabase",
+          "config": {
+            "table": "leads",
+            "operation": "insert",
+            "data": {
+              "caller_name": "{{caller_name}}",
+              "phone_number": "{{phone_number}}",
+              "category": "Emergency",
+              "address": "{{address}}",
+              "summary": "{{summary}}",
+              "sentiment": "{{sentiment}}",
+              "status": "urgent",
+              "priority": "critical",
+              "created_at": "{{call_timestamp}}"
+            }
+          }
+        }
+      ]
+    },
+    "routeC_maintenance": {
+      "name": "Maintenance Request Handler",
+      "modules": [
+        {
+          "id": "C1",
+          "name": "Send WhatsApp to Ross",
+          "type": "whatsapp",
+          "config": {
+            "to": "+447459345456",
+            "messageTemplate": "🔧 *MAINTENANCE REQUEST*\n\n👤 *Name:* {{caller_name}}\n📍 *Address:* {{address}}\n📝 *Issue:* {{summary}}\n📞 *Callback:* {{phone_number}}\n🏷️ *Type:* {{project_type}}\n\n_Received: {{call_timestamp}}_"
+          }
+        },
+        {
+          "id": "C2",
+          "name": "Log to Supabase",
+          "type": "supabase",
+          "config": {
+            "table": "leads",
+            "operation": "insert",
+            "data": {
+              "caller_name": "{{caller_name}}",
+              "phone_number": "{{phone_number}}",
+              "category": "Maintenance",
+              "address": "{{address}}",
+              "summary": "{{summary}}",
+              "status": "new",
+              "priority": "medium",
+              "created_at": "{{call_timestamp}}"
+            }
+          }
+        }
+      ]
+    },
+    "routeD_other": {
+      "name": "General Enquiry Handler",
+      "modules": [
+        {
+          "id": "D1",
+          "name": "Log to Supabase",
+          "type": "supabase",
+          "config": {
+            "table": "leads",
+            "operation": "insert",
+            "data": {
+              "caller_name": "{{caller_name}}",
+              "phone_number": "{{phone_number}}",
+              "category": "Other",
+              "summary": "{{summary}}",
+              "status": "new",
+              "priority": "low",
+              "created_at": "{{call_timestamp}}"
+            }
+          }
+        },
+        {
+          "id": "D2",
+          "name": "Optional WhatsApp (if high sentiment)",
+          "type": "whatsapp",
+          "condition": "{{sentiment}} = 'High Value'",
+          "config": {
+            "to": "+447459345456",
+            "messageTemplate": "ℹ️ *GENERAL ENQUIRY*\n\n👤 {{caller_name}}\n📞 {{phone_number}}\n📝 {{summary}}\n\n_Note: AI flagged as potentially high value_"
+          }
+        }
+      ]
+    }
+  },
+  "spamScenario": {
+    "name": "Spam Call Logger",
+    "description": "Logs spam calls for analysis (separate webhook)",
+    "trigger": {
+      "type": "webhook",
+      "name": "Vapi Spam Webhook"
+    },
+    "modules": [
+      {
+        "id": "S1",
+        "name": "Log to Google Sheets",
+        "type": "googleSheets",
+        "config": {
+          "spreadsheetId": "YOUR_SPREADSHEET_ID",
+          "sheet": "Spam Calls",
+          "operation": "addRow",
+          "data": {
+            "Date": "{{call_timestamp}}",
+            "Spam Type": "{{spam_type}}",
+            "Company": "{{company_name}}",
+            "Summary": "{{pitch_summary}}",
+            "Caller Number": "{{caller_phone_from}}"
+          }
+        }
+      }
+    ]
+  },
+  "errorHandling": {
+    "onWebhookFailure": {
+      "action": "retry",
+      "maxRetries": 3,
+      "retryDelaySeconds": 5
+    },
+    "onWhatsAppFailure": {
+      "action": "fallback",
+      "fallbackModule": "SendSMS",
+      "config": {
+        "to": "+447459345456",
+        "message": "New lead: {{caller_name}} - {{phone_number}} - {{summary}}"
+      }
+    },
+    "onDatabaseFailure": {
+      "action": "logToFile",
+      "notify": true
+    }
+  },
+  "scheduling": {
+    "active": true,
+    "timezone": "Europe/London",
+    "notes": "Runs 24/7 - no scheduling restrictions"
+  }
+}
