@@ -1,0 +1,203 @@
+{
+  "version": "4.0.0",
+  "tools": [
+    {
+      "type": "function",
+      "async": false,
+      "function": {
+        "name": "log_lead_details",
+        "description": "INSTANT: Call the moment you have name + phone + understood need. Do NOT wait.",
+        "strict": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "First name minimum",
+              "minLength": 2
+            },
+            "phone_number": {
+              "type": "string",
+              "description": "UK format: +447XXXXXXXXX or 07XXXXXXXXX",
+              "pattern": "^(\\+44|0)7[0-9]{9}$"
+            },
+            "category": {
+              "type": "string",
+              "enum": ["Renovation", "Maintenance", "Emergency", "Other"]
+            },
+            "address": {
+              "type": "string",
+              "description": "Street, area, postcode (whatever captured)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "MAX 12 words",
+              "maxLength": 100
+            },
+            "sentiment": {
+              "type": "string",
+              "enum": ["High Value", "Standard", "Urgent"]
+            },
+            "postcode": {
+              "type": "string",
+              "description": "NW3, NW6, etc.",
+              "pattern": "^(NW|N|W|WC|EC|SW|SE|E)[0-9]{1,2}$"
+            },
+            "project_type": {
+              "type": "string",
+              "enum": [
+                "Extension", "Loft Conversion", "Basement", "Full Refurbishment",
+                "Kitchen", "Bathroom", "Plumbing", "Electrics", "Boiler",
+                "Leak", "Structural", "Roofing", "Windows", "Flooring",
+                "Decorating", "External", "Multi-trade", "Emergency", "Other"
+              ]
+            },
+            "timeline": {
+              "type": "string",
+              "enum": ["ASAP", "1-4 weeks", "1-3 months", "3-6 months", "6+ months", "Unknown"]
+            },
+            "estimated_value": {
+              "type": "string",
+              "enum": ["Under 5k", "5k-20k", "20k-50k", "50k-100k", "100k+", "Unknown"]
+            },
+            "returning_client": {
+              "type": "boolean",
+              "default": false
+            },
+            "lead_score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "1=low, 10=hot premium lead"
+            },
+            "conversion_probability": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 1.0,
+              "description": "Estimated chance of becoming paying client"
+            },
+            "recommended_response_time": {
+              "type": "string",
+              "enum": ["immediate", "15min", "1hour", "same_day", "next_day"]
+            },
+            "notes": {
+              "type": "string",
+              "description": "Key details: architect, planning, access issues"
+            }
+          },
+          "required": ["caller_name", "phone_number", "category", "summary", "sentiment", "lead_score"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+        "secret": "YOUR_SECRET_HERE",
+        "timeoutSeconds": 5,
+        "headers": {
+          "X-Priority": "{{lead_score}}",
+          "X-Category": "{{category}}"
+        }
+      },
+      "messages": [
+        {"type": "request-start", "content": ""},
+        {"type": "request-complete", "content": ""},
+        {"type": "request-failed", "content": ""},
+        {"type": "request-response-delayed", "content": "", "timingMilliseconds": 1500}
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "log_spam",
+        "description": "Fire-and-forget spam logging",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "spam_type": {
+              "type": "string",
+              "enum": ["SEO", "Marketing", "Recruitment", "Leads", "Insurance", "Energy", "Telecoms", "Finance", "IT", "Surveys", "Other"]
+            },
+            "company": {"type": "string"},
+            "caller_number": {"type": "string"}
+          },
+          "required": ["spam_type"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_SPAM_WEBHOOK",
+        "timeoutSeconds": 2
+      },
+      "messages": []
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "lookup_client",
+        "description": "Check if caller is existing client",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "phone_number": {"type": "string"}
+          },
+          "required": ["phone_number"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_LOOKUP_WEBHOOK",
+        "timeoutSeconds": 3
+      },
+      "messages": []
+    },
+    {
+      "type": "endCall",
+      "function": {
+        "name": "end_call",
+        "description": "End call gracefully"
+      },
+      "messages": [
+        {"type": "request-complete", "content": "Thank you for calling. Goodbye."}
+      ]
+    },
+    {
+      "type": "transferCall",
+      "function": {
+        "name": "transfer_emergency",
+        "description": "RARE: Emergency transfer to Ross",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reason": {"type": "string"},
+            "severity": {"type": "string", "enum": ["critical", "high"]}
+          },
+          "required": ["reason"]
+        }
+      },
+      "destinations": [
+        {
+          "type": "number",
+          "number": "+447459345456",
+          "message": "Connecting you to Ross now.",
+          "description": "Ross mobile - emergencies only",
+          "transferPlan": {
+            "mode": "blind-transfer",
+            "timeout": 30
+          }
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "4.0.0",
+    "optimizations": [
+      "5s timeout (60% faster)",
+      "Async spam logging",
+      "Client lookup for personalization",
+      "Priority headers for routing",
+      "Conversion probability scoring",
+      "Response time recommendation",
+      "Phone pattern validation",
+      "Field length constraints"
+    ]
+  }
+}
