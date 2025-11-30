@@ -1,0 +1,325 @@
+{
+  "name": "Hampstead Concierge v3.0 - Ultra-Fast Lead Router",
+  "description": "10x optimized automation with parallel processing, smart caching, and instant delivery",
+  "version": "3.0.0",
+  "optimizations": [
+    "Parallel webhook processing",
+    "Pre-computed lead scoring",
+    "Template-based WhatsApp (faster delivery)",
+    "Conditional database writes",
+    "Smart deduplication",
+    "Rate limiting protection",
+    "Automatic retry with exponential backoff"
+  ],
+  "trigger": {
+    "type": "webhook",
+    "name": "Vapi Lead Webhook v3",
+    "config": {
+      "method": "POST",
+      "dataStructure": "json",
+      "responseType": "immediate",
+      "responseStatus": 200,
+      "responseBody": {"ok": true},
+      "ipWhitelist": ["api.vapi.ai"],
+      "rateLimiting": {
+        "enabled": true,
+        "maxRequestsPerMinute": 60
+      }
+    }
+  },
+  "preprocessing": {
+    "id": 0,
+    "name": "Data Extraction & Enrichment",
+    "operations": [
+      {
+        "name": "Extract Core Fields",
+        "extract": {
+          "name": "{{message.functionCall.parameters.caller_name}}",
+          "phone": "{{message.functionCall.parameters.phone_number}}",
+          "category": "{{message.functionCall.parameters.category}}",
+          "address": "{{message.functionCall.parameters.address}}",
+          "summary": "{{message.functionCall.parameters.summary}}",
+          "sentiment": "{{message.functionCall.parameters.sentiment}}",
+          "postcode": "{{message.functionCall.parameters.postcode}}",
+          "project_type": "{{message.functionCall.parameters.project_type}}",
+          "timeline": "{{message.functionCall.parameters.timeline}}",
+          "value": "{{message.functionCall.parameters.estimated_value}}",
+          "returning": "{{message.functionCall.parameters.returning_client}}",
+          "lead_score": "{{message.functionCall.parameters.lead_score}}",
+          "notes": "{{message.functionCall.parameters.notes}}",
+          "call_id": "{{call.id}}",
+          "timestamp": "{{call.createdAt}}",
+          "duration": "{{call.duration}}",
+          "caller_number": "{{call.phoneNumber}}"
+        }
+      },
+      {
+        "name": "Compute Priority Score",
+        "formula": "{{IF(category='Emergency'; 100; IF(AND(sentiment='High Value'; lead_score>=8); 95; IF(category='Renovation'; 80; IF(lead_score>=7; 70; IF(category='Maintenance'; 50; 30)))))}}"
+      },
+      {
+        "name": "Determine Notification Channel",
+        "logic": {
+          "whatsapp": "{{priority_score >= 30}}",
+          "email": "{{category = 'Emergency' OR priority_score >= 90}}",
+          "sms_backup": "{{category = 'Emergency'}}",
+          "database": true
+        }
+      },
+      {
+        "name": "Format Phone for WhatsApp",
+        "transform": "{{REPLACE(REPLACE(phone; ' '; ''); '+44'; '44')}}"
+      }
+    ]
+  },
+  "parallelExecution": {
+    "enabled": true,
+    "strategy": "fan-out",
+    "branches": [
+      {
+        "id": "branch_whatsapp",
+        "name": "WhatsApp Notification",
+        "condition": "{{whatsapp_enabled}}",
+        "modules": [
+          {
+            "name": "Send WhatsApp",
+            "type": "whatsapp_cloud",
+            "config": {
+              "phone_number_id": "YOUR_PHONE_NUMBER_ID",
+              "to": "447459345456",
+              "type": "template",
+              "template": {
+                "name": "lead_notification_v3",
+                "language": {"code": "en_GB"},
+                "components": [
+                  {
+                    "type": "header",
+                    "parameters": [
+                      {"type": "text", "text": "{{category}}"}
+                    ]
+                  },
+                  {
+                    "type": "body",
+                    "parameters": [
+                      {"type": "text", "text": "{{name}}"},
+                      {"type": "text", "text": "{{phone}}"},
+                      {"type": "text", "text": "{{address}}"},
+                      {"type": "text", "text": "{{summary}}"},
+                      {"type": "text", "text": "{{lead_score}}/10"}
+                    ]
+                  }
+                ]
+              }
+            },
+            "fallback": {
+              "type": "text_message",
+              "template": "{{category_emoji}} *{{category}}*\n\n👤 {{name}}\n📞 {{phone}}\n📍 {{address}}\n📝 {{summary}}\n⭐ Score: {{lead_score}}/10\n\n_{{timestamp}}_"
+            }
+          }
+        ]
+      },
+      {
+        "id": "branch_email",
+        "name": "Email Notification",
+        "condition": "{{email_enabled}}",
+        "modules": [
+          {
+            "name": "Send Email",
+            "type": "email_smtp",
+            "config": {
+              "to": "ross@hampsteadrenovations.com",
+              "cc": "{{IF(category='Emergency'; 'office@hampsteadrenovations.com'; '')}}",
+              "subject": "{{category_emoji}} {{category}}: {{name}} - {{postcode}}",
+              "body_html": true,
+              "template_id": "lead_email_v3"
+            }
+          }
+        ]
+      },
+      {
+        "id": "branch_database",
+        "name": "Database Storage",
+        "condition": true,
+        "modules": [
+          {
+            "name": "Upsert to Supabase",
+            "type": "supabase",
+            "config": {
+              "operation": "upsert",
+              "table": "leads",
+              "onConflict": "phone_number",
+              "data": {
+                "caller_name": "{{name}}",
+                "phone_number": "{{phone}}",
+                "category": "{{category}}",
+                "address": "{{address}}",
+                "postcode": "{{postcode}}",
+                "summary": "{{summary}}",
+                "sentiment": "{{sentiment}}",
+                "project_type": "{{project_type}}",
+                "timeline": "{{timeline}}",
+                "estimated_value": "{{value}}",
+                "returning_client": "{{returning}}",
+                "lead_score": "{{lead_score}}",
+                "priority_score": "{{priority_score}}",
+                "notes": "{{notes}}",
+                "call_id": "{{call_id}}",
+                "call_duration": "{{duration}}",
+                "status": "{{IF(category='Emergency'; 'urgent'; 'new')}}",
+                "notification_sent": true,
+                "created_at": "{{timestamp}}",
+                "updated_at": "{{NOW}}"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "branch_analytics",
+        "name": "Analytics Logging",
+        "condition": true,
+        "async": true,
+        "modules": [
+          {
+            "name": "Log to Analytics",
+            "type": "http",
+            "config": {
+              "url": "https://hook.eu1.make.com/YOUR_ANALYTICS_WEBHOOK",
+              "method": "POST",
+              "body": {
+                "event": "lead_received",
+                "category": "{{category}}",
+                "sentiment": "{{sentiment}}",
+                "lead_score": "{{lead_score}}",
+                "postcode": "{{postcode}}",
+                "call_duration": "{{duration}}",
+                "timestamp": "{{timestamp}}"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "whatsappTemplates": {
+    "renovation_high_value": {
+      "emoji": "🚨",
+      "message": "🚨 *HIGH VALUE LEAD*\n\n👤 *{{name}}*\n📍 {{address}}\n📝 {{summary}}\n\n📞 *CALL NOW:* {{phone}}\n\n🏷️ {{project_type}}\n⏰ {{timeline}}\n💰 {{value}}\n⭐ Lead Score: *{{lead_score}}/10*\n🔄 Returning: {{returning_text}}\n\n_{{timestamp}}_"
+    },
+    "emergency": {
+      "emoji": "🔴",
+      "message": "🔴🔴🔴 *EMERGENCY* 🔴🔴🔴\n\n👤 {{name}}\n📍 {{address}}\n📝 {{summary}}\n\n📞 *CALL IMMEDIATELY:*\n{{phone}}\n\n⚠️ *15 MIN CALLBACK PROMISED*\n\n_{{timestamp}}_"
+    },
+    "maintenance": {
+      "emoji": "🔧",
+      "message": "🔧 *MAINTENANCE*\n\n👤 {{name}}\n📍 {{address}}\n📝 {{summary}}\n📞 {{phone}}\n\n🏷️ {{project_type}}\n⭐ {{lead_score}}/10\n\n_{{timestamp}}_"
+    },
+    "standard": {
+      "emoji": "📋",
+      "message": "📋 *NEW ENQUIRY*\n\n👤 {{name}}\n📞 {{phone}}\n📝 {{summary}}\n\n_{{timestamp}}_"
+    }
+  },
+  "errorHandling": {
+    "retryPolicy": {
+      "maxRetries": 3,
+      "backoff": "exponential",
+      "initialDelayMs": 1000,
+      "maxDelayMs": 30000
+    },
+    "fallbacks": {
+      "whatsapp_failure": [
+        {
+          "action": "sms",
+          "config": {
+            "to": "+447459345456",
+            "message": "New {{category}} lead: {{name}} {{phone}} - {{summary}}"
+          }
+        },
+        {
+          "action": "email",
+          "config": {
+            "to": "ross@hampsteadrenovations.com",
+            "subject": "URGENT: WhatsApp Failed - {{name}}",
+            "body": "WhatsApp notification failed.\n\nLead: {{name}}\nPhone: {{phone}}\nCategory: {{category}}\nSummary: {{summary}}"
+          }
+        }
+      ],
+      "database_failure": {
+        "action": "queue",
+        "config": {
+          "queue": "failed_leads",
+          "retryAfterMinutes": 5
+        }
+      }
+    },
+    "alerting": {
+      "onConsecutiveFailures": 3,
+      "channels": ["email", "sms"],
+      "recipients": ["+447459345456"]
+    }
+  },
+  "deduplication": {
+    "enabled": true,
+    "window": "5 minutes",
+    "key": "{{phone}}_{{category}}",
+    "action": "merge_and_update"
+  },
+  "rateLimiting": {
+    "whatsapp": {
+      "maxPerMinute": 30,
+      "maxPerHour": 200
+    },
+    "email": {
+      "maxPerMinute": 10
+    }
+  },
+  "monitoring": {
+    "healthCheck": {
+      "enabled": true,
+      "intervalMinutes": 5,
+      "endpoint": "https://hook.eu1.make.com/YOUR_HEALTH_WEBHOOK"
+    },
+    "metrics": [
+      "leads_processed",
+      "whatsapp_sent",
+      "whatsapp_failed",
+      "avg_processing_time_ms",
+      "error_rate"
+    ]
+  },
+  "spamHandler": {
+    "trigger": "log_spam function call",
+    "actions": [
+      {
+        "name": "Log to Sheet",
+        "type": "google_sheets",
+        "config": {
+          "spreadsheetId": "YOUR_SPREADSHEET_ID",
+          "sheet": "Spam Log",
+          "row": ["{{timestamp}}", "{{spam_type}}", "{{company}}", "{{caller_number}}"]
+        }
+      },
+      {
+        "name": "Add to Blocklist",
+        "type": "supabase",
+        "config": {
+          "table": "blocked_numbers",
+          "data": {
+            "phone": "{{caller_number}}",
+            "reason": "spam_{{spam_type}}",
+            "blocked_at": "{{timestamp}}"
+          }
+        }
+      }
+    ]
+  },
+  "scheduling": {
+    "active": true,
+    "timezone": "Europe/London",
+    "priorityHours": {
+      "high": ["09:00-18:00"],
+      "medium": ["18:00-21:00", "07:00-09:00"],
+      "low": ["21:00-07:00"]
+    }
+  }
+}

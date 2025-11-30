@@ -1,0 +1,205 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "async": false,
+      "function": {
+        "name": "log_lead_details",
+        "description": "MANDATORY: Call immediately after collecting name, phone, and understanding the enquiry. Do NOT wait until call end.",
+        "strict": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "Caller's name (first name is fine)"
+            },
+            "phone_number": {
+              "type": "string",
+              "description": "UK mobile: +447XXXXXXXXX or 07XXXXXXXXX"
+            },
+            "category": {
+              "type": "string",
+              "enum": ["Renovation", "Maintenance", "Emergency", "Other"]
+            },
+            "address": {
+              "type": "string",
+              "description": "Street and postcode area (e.g., 'Elm Row, NW3')"
+            },
+            "summary": {
+              "type": "string",
+              "description": "MAX 20 words describing what they need"
+            },
+            "sentiment": {
+              "type": "string",
+              "enum": ["High Value", "Standard", "Angry/Urgent"]
+            },
+            "postcode": {
+              "type": "string",
+              "description": "Just postcode district: NW3, NW6, NW8, etc."
+            },
+            "project_type": {
+              "type": "string",
+              "enum": ["Extension", "Loft Conversion", "Basement", "Full Refurbishment", "Kitchen", "Bathroom", "Plumbing", "Electrics", "Boiler", "Leak", "Structural", "Roofing", "Windows", "Flooring", "Decorating", "External", "Multi-trade", "Other"]
+            },
+            "timeline": {
+              "type": "string",
+              "enum": ["ASAP", "1-4 weeks", "1-3 months", "3-6 months", "6+ months", "Planning", "Unknown"]
+            },
+            "estimated_value": {
+              "type": "string",
+              "enum": ["Under 5k", "5k-20k", "20k-50k", "50k-100k", "100k+", "Unknown"]
+            },
+            "returning_client": {
+              "type": "boolean"
+            },
+            "lead_score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "1-10 score: 10=hot premium lead, 1=low value"
+            },
+            "notes": {
+              "type": "string",
+              "description": "Key details: architect engaged, planning status, access issues"
+            }
+          },
+          "required": ["caller_name", "phone_number", "category", "summary", "sentiment", "lead_score"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+        "secret": "YOUR_SECRET_HERE",
+        "timeoutSeconds": 8
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "content": ""
+        },
+        {
+          "type": "request-complete",
+          "content": ""
+        },
+        {
+          "type": "request-failed",
+          "content": ""
+        },
+        {
+          "type": "request-response-delayed",
+          "content": "",
+          "timingMilliseconds": 2000
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "log_spam",
+        "description": "Log spam call when terminating",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "spam_type": {
+              "type": "string",
+              "enum": ["SEO", "Marketing", "Recruitment", "Leads", "Insurance", "Energy", "Telecoms", "Finance", "IT", "Other"]
+            },
+            "company": {
+              "type": "string"
+            }
+          },
+          "required": ["spam_type"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_SPAM_WEBHOOK",
+        "timeoutSeconds": 3
+      },
+      "messages": []
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "check_availability",
+        "description": "Check Ross's calendar availability (future feature)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "requested_date": {
+              "type": "string",
+              "description": "Date mentioned by caller"
+            }
+          },
+          "required": []
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_CALENDAR_WEBHOOK",
+        "timeoutSeconds": 5
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "content": "Let me check Ross's availability."
+        },
+        {
+          "type": "request-complete",
+          "content": "Ross will confirm times when he calls you back."
+        }
+      ]
+    },
+    {
+      "type": "endCall",
+      "function": {
+        "name": "end_call",
+        "description": "End the call gracefully after function call or spam detection"
+      },
+      "messages": [
+        {
+          "type": "request-complete",
+          "content": "Thank you for calling Hampstead Renovations. Goodbye."
+        }
+      ]
+    },
+    {
+      "type": "transferCall",
+      "function": {
+        "name": "transfer_to_ross",
+        "description": "Emergency transfer to Ross mobile - RARELY USE",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": ["reason"]
+        }
+      },
+      "destinations": [
+        {
+          "type": "number",
+          "number": "+447459345456",
+          "message": "Transferring you to Ross now.",
+          "description": "Ross's mobile"
+        }
+      ]
+    }
+  ],
+  "toolIds": [],
+  "metadata": {
+    "version": "3.0.0",
+    "lastUpdated": "2025-11-30",
+    "optimizations": [
+      "Reduced timeout to 8s for lead logging",
+      "Async spam logging (doesn't block)",
+      "Silent request messages (no verbal confirmation)",
+      "Added lead_score for prioritization",
+      "Strict schema validation",
+      "Native endCall tool",
+      "Transfer capability for emergencies"
+    ]
+  }
+}

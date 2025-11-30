@@ -1,0 +1,240 @@
+{
+  "name": "Hampstead Receptionist - Sarah v3.0",
+  "description": "Ultra-optimized AI Executive Assistant for Hampstead Renovations - 10x Performance Edition",
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "fallbackModels": ["gpt-4o"],
+    "temperature": 0.4,
+    "maxTokens": 250,
+    "semanticCachingEnabled": true,
+    "numFastTurns": 3,
+    "emotionRecognitionEnabled": true,
+    "knowledgeBase": {
+      "provider": "custom-knowledge-base",
+      "fileIds": [],
+      "topK": 3
+    }
+  },
+  "voice": {
+    "provider": "elevenlabs",
+    "voiceId": "EXAVITQu4vr4xnSDxMaL",
+    "model": "eleven_flash_v2_5",
+    "stability": 0.45,
+    "similarityBoost": 0.78,
+    "style": 0.05,
+    "useSpeakerBoost": true,
+    "optimizeStreamingLatency": 4,
+    "chunkPlan": {
+      "enabled": true,
+      "minCharacters": 10,
+      "punctuationBoundaries": [".", "!", "?", ",", ";"],
+      "formatPlan": {
+        "enabled": true,
+        "numberToDigitsCutoff": 2025
+      }
+    },
+    "fallbackPlan": {
+      "voices": [
+        {
+          "provider": "deepgram",
+          "voiceId": "aura-athena-en"
+        },
+        {
+          "provider": "playht",
+          "voiceId": "jennifer"
+        }
+      ]
+    }
+  },
+  "transcriber": {
+    "provider": "deepgram",
+    "model": "nova-2",
+    "language": "en-GB",
+    "smartFormat": true,
+    "punctuate": true,
+    "profanityFilter": false,
+    "redact": false,
+    "diarize": false,
+    "multichannel": false,
+    "alternatives": 1,
+    "endpointing": 300,
+    "interimResults": true,
+    "utteranceEndMs": 1000,
+    "vadEvents": true,
+    "keywords": [
+      "Hampstead:10",
+      "Belsize:8",
+      "Swiss Cottage:8",
+      "Primrose Hill:8",
+      "St John's Wood:8",
+      "NW3:10",
+      "NW6:10",
+      "NW8:10",
+      "NW11:8",
+      "renovation:8",
+      "extension:8",
+      "loft conversion:10",
+      "basement:8",
+      "refurbishment:8",
+      "Ross:10",
+      "Finchley Road:8",
+      "kitchen:6",
+      "bathroom:6",
+      "boiler:6",
+      "plumbing:6",
+      "electrics:6",
+      "leak:8",
+      "emergency:10",
+      "urgent:8"
+    ]
+  },
+  "firstMessage": "Good afternoon, Hampstead Renovations. Sarah speaking, how may I help you?",
+  "firstMessageMode": "assistant-speaks-first-with-model-generated-message",
+  "hipaaEnabled": false,
+  "silenceTimeoutSeconds": 20,
+  "maxDurationSeconds": 480,
+  "backgroundSound": "off",
+  "backchannelingEnabled": true,
+  "backgroundDenoisingEnabled": true,
+  "modelOutputInMessagesEnabled": true,
+  "transportConfigurations": [
+    {
+      "provider": "twilio",
+      "timeout": 60,
+      "record": true,
+      "recordingChannels": "dual"
+    }
+  ],
+  "serverUrl": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+  "serverUrlSecret": "YOUR_SECRET_HERE",
+  "endCallFunctionEnabled": true,
+  "endCallMessage": "Thank you for calling Hampstead Renovations. Goodbye.",
+  "recordingEnabled": true,
+  "videoRecordingEnabled": false,
+  "clientMessages": [
+    "conversation-update",
+    "function-call",
+    "hang",
+    "model-output",
+    "speech-update",
+    "status-update",
+    "transcript",
+    "tool-calls",
+    "user-interrupted",
+    "voice-input"
+  ],
+  "serverMessages": [
+    "conversation-update",
+    "end-of-call-report",
+    "function-call",
+    "hang",
+    "speech-update",
+    "status-update",
+    "tool-calls",
+    "transfer-destination-request",
+    "user-interrupted"
+  ],
+  "artifactPlan": {
+    "recordingEnabled": true,
+    "videoRecordingEnabled": false,
+    "transcriptPlan": {
+      "enabled": true,
+      "assistantName": "Sarah",
+      "userName": "Caller"
+    },
+    "recordingPath": "recordings/{{call.id}}.wav"
+  },
+  "startSpeakingPlan": {
+    "waitSeconds": 0.25,
+    "smartEndpointingEnabled": true,
+    "customEndpointingRules": [
+      {
+        "type": "transcriptEndpointing",
+        "timeoutSeconds": 0.8,
+        "regex": "\\d{4,}$"
+      },
+      {
+        "type": "transcriptEndpointing",
+        "timeoutSeconds": 0.4,
+        "regex": "(yes|no|yeah|yep|nope|okay|ok)$"
+      }
+    ],
+    "transcriptionEndpointingPlan": {
+      "onPunctuationSeconds": 0.08,
+      "onNoPunctuationSeconds": 1.0,
+      "onNumberSeconds": 0.6
+    }
+  },
+  "stopSpeakingPlan": {
+    "numWords": 0,
+    "voiceSeconds": 0.15,
+    "backoffSeconds": 0.8
+  },
+  "credentialIds": [],
+  "metadata": {
+    "business": "Hampstead Renovations",
+    "location": "250 Finchley Road, London",
+    "director": "Ross",
+    "directorMobile": "+447459345456",
+    "serviceAreas": ["NW3", "NW6", "NW8", "NW11", "N2", "N6", "NW1", "NW2", "NW5"],
+    "version": "3.0.0",
+    "lastUpdated": "2025-11-30",
+    "optimizations": [
+      "gpt-4o-mini for speed",
+      "eleven_flash_v2_5 for ultra-low latency",
+      "semantic caching enabled",
+      "custom endpointing rules",
+      "interim transcription results",
+      "VAD events enabled",
+      "extended keyword boosting",
+      "voice fallback chain"
+    ]
+  },
+  "analysisPlan": {
+    "summaryPrompt": "In 1 sentence: caller name, location, what they need, urgency level.",
+    "summaryRequestTimeoutSeconds": 15,
+    "structuredDataPrompt": "Extract: name, phone, address, project_type, urgency (1-5), sentiment (positive/neutral/negative), estimated_value (low/medium/high/premium)",
+    "structuredDataRequestTimeoutSeconds": 15,
+    "structuredDataSchema": {
+      "type": "object",
+      "properties": {
+        "caller_name": {"type": "string"},
+        "phone_number": {"type": "string"},
+        "address": {"type": "string"},
+        "postcode": {"type": "string"},
+        "project_type": {"type": "string"},
+        "urgency_score": {"type": "integer", "minimum": 1, "maximum": 5},
+        "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative"]},
+        "estimated_value": {"type": "string", "enum": ["low", "medium", "high", "premium"]},
+        "lead_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "is_spam": {"type": "boolean"},
+        "call_duration_seconds": {"type": "integer"},
+        "data_completeness": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "required": ["caller_name", "phone_number", "project_type"]
+    },
+    "successEvaluationPrompt": "Score 1-10: Did Sarah (1) greet professionally, (2) identify needs quickly, (3) collect name+phone+address, (4) categorize correctly, (5) call log_lead_details, (6) set callback expectation?",
+    "successEvaluationRubric": "NumericScale",
+    "successEvaluationRequestTimeoutSeconds": 15
+  },
+  "hooks": {
+    "onCallStart": {
+      "action": "log",
+      "data": {"event": "call_started", "timestamp": "{{now}}"}
+    },
+    "onCallEnd": {
+      "action": "webhook",
+      "url": "https://hook.eu1.make.com/YOUR_ANALYTICS_WEBHOOK",
+      "data": {
+        "call_id": "{{call.id}}",
+        "duration": "{{call.duration}}",
+        "outcome": "{{call.endedReason}}"
+      }
+    },
+    "onFunctionCall": {
+      "action": "log",
+      "data": {"function": "{{function.name}}", "success": "{{function.success}}"}
+    }
+  }
+}
