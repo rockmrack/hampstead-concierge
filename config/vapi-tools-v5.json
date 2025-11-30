@@ -1,0 +1,418 @@
+{
+  "version": "5.0.0",
+  "codename": "COMPLETE",
+  "region": "uk",
+  "tools": [
+    {
+      "type": "function",
+      "async": false,
+      "function": {
+        "name": "log_lead_details",
+        "description": "Log the lead after collecting all information and confirming phone number. Call this before closing the conversation.",
+        "strict": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "Full name as the caller provided it",
+              "minLength": 2
+            },
+            "phone_number": {
+              "type": "string",
+              "description": "UK phone number in +44 or 07/01/02 format",
+              "pattern": "^(\\+44|0)[0-9]{10,11}$"
+            },
+            "phone_confirmed": {
+              "type": "boolean",
+              "description": "TRUE only if you read the number back and they confirmed it",
+              "default": false
+            },
+            "category": {
+              "type": "string",
+              "enum": ["Renovation", "Maintenance", "Emergency", "Enquiry", "Other"]
+            },
+            "address": {
+              "type": "string",
+              "description": "Property address including street name"
+            },
+            "postcode": {
+              "type": "string",
+              "description": "UK postcode (e.g., NW3 1AA)",
+              "pattern": "^[A-Z]{1,2}[0-9R][0-9A-Z]?\\s?[0-9][A-Z]{2}$"
+            },
+            "summary": {
+              "type": "string",
+              "description": "Natural description of what they need",
+              "maxLength": 250
+            },
+            "project_type": {
+              "type": "string",
+              "enum": [
+                "Extension", "Loft Conversion", "Basement", "Full Refurbishment",
+                "Kitchen", "Bathroom", "Plumbing", "Electrics", "Boiler",
+                "Leak", "Structural", "Roofing", "Windows/Doors", "Flooring",
+                "Decorating", "External/Garden", "Multi-trade", "Emergency", 
+                "Enquiry", "Other"
+              ]
+            },
+            "sentiment": {
+              "type": "string",
+              "enum": ["High Value", "Standard", "Urgent"],
+              "description": "High Value = major project or premium postcode, Urgent = emergency"
+            },
+            "caller_emotion": {
+              "type": "string",
+              "enum": ["Excited", "Positive", "Neutral", "Concerned", "Stressed", "Frustrated"],
+              "description": "Caller's emotional state"
+            },
+            "timeline": {
+              "type": "string",
+              "enum": ["ASAP", "1-2 weeks", "1 month", "2-3 months", "3-6 months", "6+ months", "Planning stage", "Unknown"]
+            },
+            "estimated_value": {
+              "type": "string",
+              "enum": ["Under £5k", "£5k-£15k", "£15k-£30k", "£30k-£50k", "£50k-£100k", "Over £100k", "Unknown"],
+              "description": "Estimated project value in GBP"
+            },
+            "returning_client": {
+              "type": "boolean",
+              "default": false
+            },
+            "lead_score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Quality score 1-100"
+            },
+            "is_after_hours": {
+              "type": "boolean",
+              "description": "Was this call outside business hours?",
+              "default": false
+            },
+            "sms_consent": {
+              "type": "boolean",
+              "description": "Did caller agree to receive SMS confirmation?",
+              "default": false
+            },
+            "appointment_interest": {
+              "type": "boolean",
+              "description": "Is caller interested in booking a site visit?",
+              "default": false
+            },
+            "preferred_callback_time": {
+              "type": "string",
+              "description": "Any stated preference for when to call back"
+            },
+            "language_detected": {
+              "type": "string",
+              "enum": ["en-GB", "pl", "es", "pt", "other"],
+              "default": "en-GB"
+            },
+            "call_quality": {
+              "type": "string",
+              "enum": ["Excellent", "Good", "Adequate", "Difficult"]
+            },
+            "notes": {
+              "type": "string",
+              "description": "Important details: architect, planning permission, access issues, etc."
+            }
+          },
+          "required": [
+            "caller_name", 
+            "phone_number", 
+            "phone_confirmed",
+            "category", 
+            "summary", 
+            "sentiment", 
+            "lead_score"
+          ]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_WEBHOOK_ID_HERE",
+        "secret": "YOUR_SECRET_HERE",
+        "timeoutSeconds": 6,
+        "headers": {
+          "X-Lead-Score": "{{lead_score}}",
+          "X-Category": "{{category}}",
+          "X-SMS-Consent": "{{sms_consent}}",
+          "X-After-Hours": "{{is_after_hours}}"
+        }
+      },
+      "messages": [
+        {"type": "request-start", "content": ""},
+        {"type": "request-complete", "content": ""},
+        {"type": "request-failed", "content": "I've made a note of all your details."},
+        {"type": "request-response-delayed", "content": "", "timingMilliseconds": 2000}
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "send_sms_confirmation",
+        "description": "Send SMS confirmation to caller after they consent",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "phone_number": {
+              "type": "string",
+              "description": "UK mobile number to send SMS to"
+            },
+            "caller_name": {
+              "type": "string"
+            },
+            "template": {
+              "type": "string",
+              "enum": ["standard", "emergency", "after_hours", "appointment"],
+              "default": "standard"
+            },
+            "callback_time": {
+              "type": "string",
+              "description": "When to expect callback (e.g., 'within the hour', 'first thing tomorrow')"
+            },
+            "appointment_details": {
+              "type": "object",
+              "properties": {
+                "date": {"type": "string"},
+                "time": {"type": "string"},
+                "address": {"type": "string"}
+              }
+            }
+          },
+          "required": ["phone_number", "caller_name", "template"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_SMS_WEBHOOK",
+        "timeoutSeconds": 5
+      },
+      "messages": [
+        {"type": "request-start", "content": ""},
+        {"type": "request-complete", "content": "That's on its way to you now."},
+        {"type": "request-failed", "content": ""}
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "check_availability",
+        "description": "Check Ross's calendar for available appointment slots",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "postcode": {
+              "type": "string",
+              "description": "Property postcode to factor in travel time"
+            },
+            "preferred_days": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Preferred days if caller mentioned any"
+            },
+            "preferred_time": {
+              "type": "string",
+              "enum": ["morning", "afternoon", "any"],
+              "default": "any"
+            }
+          },
+          "required": ["postcode"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_CALENDAR_WEBHOOK",
+        "timeoutSeconds": 5
+      },
+      "messages": [
+        {"type": "request-start", "content": "Let me just check Ross's diary..."},
+        {"type": "request-complete", "content": ""},
+        {"type": "request-failed", "content": "I'm having trouble checking the diary at the moment. Ross will discuss timing when he calls you."}
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "book_appointment",
+        "description": "Book a site visit appointment in Ross's calendar",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "caller_name": {"type": "string"},
+            "phone_number": {"type": "string"},
+            "address": {"type": "string"},
+            "postcode": {"type": "string"},
+            "date": {"type": "string", "description": "Date in DD/MM/YYYY format"},
+            "time": {"type": "string", "description": "Time in HH:MM format (24hr)"},
+            "project_type": {"type": "string"},
+            "notes": {"type": "string"}
+          },
+          "required": ["caller_name", "phone_number", "address", "date", "time"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_BOOKING_WEBHOOK",
+        "timeoutSeconds": 8
+      },
+      "messages": [
+        {"type": "request-start", "content": "Just popping that in the diary..."},
+        {"type": "request-complete", "content": "That's all booked in. You'll receive a text reminder the day before."},
+        {"type": "request-failed", "content": "I'm sorry, I couldn't complete the booking. Ross will arrange a time when he calls you."}
+      ]
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "log_spam",
+        "description": "Log spam/nuisance calls for blocking",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "spam_type": {
+              "type": "string",
+              "enum": ["SEO", "Marketing", "Recruitment", "Lead Generation", "Insurance", "Energy", "Telecoms", "Finance", "IT Services", "Surveys", "Scam", "Other"]
+            },
+            "company_name": {"type": "string"},
+            "caller_number": {"type": "string"}
+          },
+          "required": ["spam_type"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_SPAM_WEBHOOK",
+        "timeoutSeconds": 2
+      },
+      "messages": []
+    },
+    {
+      "type": "function",
+      "async": true,
+      "function": {
+        "name": "lookup_client",
+        "description": "Check if this is a returning client",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "phone_number": {"type": "string"}
+          },
+          "required": ["phone_number"]
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_LOOKUP_WEBHOOK",
+        "timeoutSeconds": 3
+      },
+      "messages": []
+    },
+    {
+      "type": "function",
+      "async": false,
+      "function": {
+        "name": "get_business_hours_status",
+        "description": "Check if currently within business hours (UK timezone)",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      "server": {
+        "url": "https://hook.eu1.make.com/YOUR_HOURS_WEBHOOK",
+        "timeoutSeconds": 2
+      },
+      "messages": []
+    },
+    {
+      "type": "endCall",
+      "function": {
+        "name": "end_call",
+        "description": "End the call gracefully"
+      },
+      "messages": [
+        {"type": "request-complete", "content": "Thank you so much for calling Hampstead Renovations. Have a lovely day. Goodbye!"}
+      ]
+    },
+    {
+      "type": "transferCall",
+      "function": {
+        "name": "transfer_to_ross",
+        "description": "Emergency transfer to Ross - genuine emergencies only",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reason": {"type": "string"},
+            "severity": {"type": "string", "enum": ["critical", "high"]}
+          },
+          "required": ["reason"]
+        }
+      },
+      "destinations": [
+        {
+          "type": "number",
+          "number": "+447459345456",
+          "message": "I'm just transferring you to Ross now. One moment please.",
+          "description": "Ross mobile - genuine emergencies only",
+          "transferPlan": {
+            "mode": "warm-transfer",
+            "timeout": 30
+          }
+        }
+      ]
+    }
+  ],
+  
+  "smsTemplates": {
+    "region": "uk",
+    "senderId": "Hampstead",
+    "templates": {
+      "standard": {
+        "body": "Hi {{name}}, thanks for calling Hampstead Renovations! Ross will call you back {{callback_time}}. If urgent, reply URGENT. - Sarah"
+      },
+      "emergency": {
+        "body": "Hi {{name}}, we've received your urgent request. Ross will call within 15 mins. If life-threatening, call 999. - Hampstead Renovations"
+      },
+      "after_hours": {
+        "body": "Hi {{name}}, thanks for calling Hampstead Renovations. As it's outside office hours, Ross will call you first thing {{next_business_day}}. - Sarah"
+      },
+      "appointment": {
+        "body": "Hi {{name}}, confirmed: Ross will visit {{address}} on {{date}} at {{time}}. Reply to reschedule. - Hampstead Renovations"
+      },
+      "appointment_reminder": {
+        "body": "Reminder: Ross from Hampstead Renovations is visiting {{address}} tomorrow at {{time}}. Reply if you need to reschedule."
+      }
+    },
+    "optOut": {
+      "keyword": "STOP",
+      "response": "You've been unsubscribed from Hampstead Renovations SMS. Call us anytime on 020 7XXX XXXX."
+    }
+  },
+  
+  "ukCompliance": {
+    "tps": {
+      "checkBeforeOutbound": true,
+      "exemptionReason": "existing_enquiry"
+    },
+    "gdpr": {
+      "lawfulBasis": "legitimate_interest",
+      "retentionPeriod": "2_years",
+      "rightToErasure": true
+    },
+    "ofcom": {
+      "silentCallPrevention": true,
+      "cliPresentation": true,
+      "answeringMachineDetection": false
+    }
+  },
+  
+  "metadata": {
+    "version": "5.0.0",
+    "region": "uk",
+    "timezone": "Europe/London",
+    "currency": "GBP",
+    "dateFormat": "DD/MM/YYYY",
+    "phoneFormat": "uk"
+  }
+}

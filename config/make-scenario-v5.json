@@ -1,0 +1,655 @@
+{
+  "version": "5.0.0",
+  "codename": "COMPLETE",
+  "name": "Hampstead Concierge Complete Processing",
+  "description": "Full-featured lead processing with SMS, WhatsApp actions, appointments, analytics, and UK compliance",
+  "region": "eu1",
+  
+  "scenario": {
+    "id": "hampstead_complete_v5",
+    "trigger": "webhook_receive",
+    "timeout": 120,
+    "maxConcurrency": 25,
+    "timezone": "Europe/London"
+  },
+
+  "modules": [
+    {
+      "id": 1,
+      "name": "Webhook Trigger",
+      "type": "webhook",
+      "config": {
+        "name": "Lead from Vapi v5",
+        "immediateResponse": {
+          "status": "ok",
+          "message": "Lead received for processing"
+        }
+      }
+    },
+    
+    {
+      "id": 2,
+      "name": "Validation & Enrichment",
+      "type": "transformer",
+      "config": {
+        "operations": [
+          {
+            "name": "Format UK Phone",
+            "input": "{{phone_number}}",
+            "output": "formatted_phone",
+            "transformations": [
+              {"type": "replace", "pattern": "\\s+", "replacement": ""},
+              {"type": "replace", "pattern": "^0", "replacement": "+44"},
+              {"type": "validate", "pattern": "^\\+44[0-9]{10,11}$"}
+            ]
+          },
+          {
+            "name": "Format Postcode",
+            "input": "{{postcode}}",
+            "output": "formatted_postcode",
+            "transformations": [
+              {"type": "uppercase"},
+              {"type": "replace", "pattern": "\\s+", "replacement": " "}
+            ]
+          },
+          {
+            "name": "Calculate UK Time",
+            "output": "uk_time",
+            "value": "{{now | timezone: 'Europe/London' | date: '%H:%M'}}"
+          },
+          {
+            "name": "Calculate UK Date",
+            "output": "uk_date",
+            "value": "{{now | timezone: 'Europe/London' | date: '%d/%m/%Y'}}"
+          },
+          {
+            "name": "Is Business Hours",
+            "output": "is_business_hours",
+            "calculation": "time >= '08:00' AND time <= '18:00' AND weekday IN (1,2,3,4,5) OR (weekday = 6 AND time >= '09:00' AND time <= '14:00')"
+          },
+          {
+            "name": "Next Business Day",
+            "output": "next_business_day",
+            "calculation": "weekday = 5 AND time > '18:00' ? 'Monday' : weekday = 6 AND time > '14:00' ? 'Monday' : weekday = 0 ? 'Monday' : 'tomorrow'"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 3,
+      "name": "Quality Score Calculator",
+      "type": "calculator",
+      "config": {
+        "formula": {
+          "project_score": {
+            "Extension": 20, "Loft Conversion": 20, "Basement": 25, 
+            "Full Refurbishment": 22, "Kitchen": 12, "Bathroom": 10,
+            "Emergency": 15
+          },
+          "location_score": {
+            "premium": ["NW3", "NW8", "NW11", "N6"],
+            "high": ["NW6", "N2", "NW1", "NW2", "NW5"],
+            "weights": {"premium": 20, "high": 12, "other": 5}
+          },
+          "value_score": {
+            "Over £100k": 20, "£50k-£100k": 16, "£30k-£50k": 12,
+            "£15k-£30k": 8, "£5k-£15k": 5, "Under £5k": 2
+          },
+          "quality_adjustments": {
+            "phone_confirmed": 15,
+            "returning_client": 12,
+            "sms_consent": 3,
+            "appointment_interest": 5
+          },
+          "final": "MIN(100, base + project + location + value + adjustments)"
+        }
+      }
+    },
+    
+    {
+      "id": 4,
+      "name": "Spam Filter",
+      "type": "filter",
+      "config": {
+        "conditions": [
+          {"field": "category", "notEquals": "Spam"},
+          {"field": "caller_name", "notContains": ["Marketing", "SEO", "Sales"]}
+        ],
+        "onBlock": {"target": 50}
+      }
+    },
+    
+    {
+      "id": 5,
+      "name": "Priority Router",
+      "type": "router",
+      "config": {
+        "routes": [
+          {"name": "Emergency", "condition": "category = 'Emergency'", "target": 10},
+          {"name": "Hot Lead", "condition": "quality_score >= 70", "target": 11},
+          {"name": "After Hours Hot", "condition": "is_after_hours AND quality_score >= 50", "target": 12},
+          {"name": "After Hours Standard", "condition": "is_after_hours", "target": 13},
+          {"name": "Standard High", "condition": "quality_score >= 50", "target": 14},
+          {"name": "Standard", "default": true, "target": 15}
+        ]
+      }
+    },
+    
+    {
+      "id": 10,
+      "name": "Emergency Handler",
+      "type": "parallel_actions",
+      "description": "Emergency: WhatsApp + SMS + Call + Database",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp_interactive",
+            "to": "+447459345456",
+            "message": "🚨 *EMERGENCY*\n\n👤 *{{caller_name}}*\n📞 {{formatted_phone}}\n📍 {{address}}, {{formatted_postcode}}\n\n⚠️ *{{summary}}*\n\n*Call within 15 minutes*",
+            "buttons": [
+              {"id": "call_now", "title": "📞 Call Now"},
+              {"id": "called", "title": "✅ Called"},
+              {"id": "cant_help", "title": "❌ Can't Help"}
+            ]
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, we've received your urgent request. Ross will call within 15 mins. If life-threatening, call 999. - Hampstead Renovations"
+          },
+          {
+            "type": "twilio_call",
+            "to": "+447459345456",
+            "twiml": "<Response><Say voice='alice' language='en-GB'>Emergency call from {{caller_name}}. Issue: {{summary}}. Phone number: {{formatted_phone}}</Say></Response>"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 11,
+      "name": "Hot Lead Handler",
+      "type": "parallel_actions",
+      "description": "Hot lead during business hours",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp_interactive",
+            "to": "+447459345456",
+            "message": "🔥 *HOT LEAD - Score {{quality_score}}/100*\n\n👤 *{{caller_name}}*\n📞 {{formatted_phone}} ✓\n📍 {{area_name}} ({{formatted_postcode}})\n\n🏗️ {{project_type}}\n💷 {{estimated_value}}\n⏰ {{timeline}}\n\n📝 {{summary}}\n\n{{#if notes}}💡 {{notes}}{{/if}}\n\n*Call within 30 mins*",
+            "buttons": [
+              {"id": "call_now", "title": "📞 Call Now"},
+              {"id": "call_1hr", "title": "⏰ Call in 1hr"},
+              {"id": "booked", "title": "📅 Booked"}
+            ]
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, thanks for calling Hampstead Renovations! Ross will call you back within the hour. If urgent, reply URGENT. - Sarah"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 12,
+      "name": "After Hours Hot Lead",
+      "type": "parallel_actions",
+      "description": "High-value lead outside business hours",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp_interactive",
+            "to": "+447459345456",
+            "message": "🌙 *AFTER HOURS - Hot Lead*\n\n👤 *{{caller_name}}*\n📞 {{formatted_phone}} ✓\n📍 {{area_name}}\n\n🏗️ {{project_type}} - {{estimated_value}}\n\n📝 {{summary}}\n\nScore: {{quality_score}}/100\nCalled: {{uk_time}} on {{uk_date}}",
+            "buttons": [
+              {"id": "call_now", "title": "📞 Call Now"},
+              {"id": "tomorrow_am", "title": "☀️ Tomorrow AM"},
+              {"id": "noted", "title": "✓ Noted"}
+            ]
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, thanks for calling Hampstead Renovations. As it's outside office hours, Ross will call you first thing {{next_business_day}}. - Sarah"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 13,
+      "name": "After Hours Standard",
+      "type": "sequential_actions",
+      "description": "Standard lead outside business hours",
+      "config": {
+        "actions": [
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, thanks for calling Hampstead Renovations. As it's outside office hours, Ross will call you first thing {{next_business_day}}. - Sarah"
+          },
+          {
+            "type": "add_to_morning_digest",
+            "data": {"name": "{{caller_name}}", "phone": "{{formatted_phone}}", "summary": "{{summary}}"}
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 14,
+      "name": "Standard High Priority",
+      "type": "parallel_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "whatsapp_interactive",
+            "to": "+447459345456",
+            "message": "📈 *New Lead - Score {{quality_score}}*\n\n👤 {{caller_name}}\n📞 {{formatted_phone}}\n📍 {{area_name}}\n🏗️ {{project_type}}\n\n📝 {{summary}}",
+            "buttons": [
+              {"id": "call_now", "title": "📞 Call"},
+              {"id": "later", "title": "⏰ Later"},
+              {"id": "spam", "title": "🚫 Spam"}
+            ]
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, thanks for calling Hampstead Renovations! Ross will call you back within the hour. - Sarah"
+          },
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 15,
+      "name": "Standard Lead",
+      "type": "sequential_actions",
+      "config": {
+        "actions": [
+          {
+            "type": "supabase_insert",
+            "table": "leads",
+            "data": "{{enriched_lead}}"
+          },
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "message": "📋 *New Enquiry*\n\n👤 {{caller_name}}\n📞 {{formatted_phone}}\n🏗️ {{project_type}}\n\n📝 {{summary}}"
+          },
+          {
+            "type": "twilio_sms",
+            "condition": "sms_consent = true",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, thanks for calling Hampstead Renovations! Ross will call you back today. - Sarah"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 20,
+      "name": "WhatsApp Button Handler",
+      "type": "webhook",
+      "description": "Handle Ross's button responses",
+      "config": {
+        "trigger": "whatsapp_button_reply",
+        "routes": [
+          {
+            "button_id": "call_now",
+            "actions": [
+              {"type": "supabase_update", "table": "leads", "set": {"status": "calling", "callback_started": "{{now}}"}},
+              {"type": "twilio_call", "to": "+447459345456", "then": "{{lead_phone}}"}
+            ]
+          },
+          {
+            "button_id": "called",
+            "actions": [
+              {"type": "supabase_update", "table": "leads", "set": {"status": "contacted", "contacted_at": "{{now}}"}}
+            ]
+          },
+          {
+            "button_id": "call_1hr",
+            "actions": [
+              {"type": "schedule_reminder", "delay": "1_hour", "message": "⏰ Reminder: Call {{caller_name}} - {{formatted_phone}}"}
+            ]
+          },
+          {
+            "button_id": "tomorrow_am",
+            "actions": [
+              {"type": "schedule_reminder", "time": "09:00", "timezone": "Europe/London", "message": "☀️ Morning callback: {{caller_name}} - {{formatted_phone}}"}
+            ]
+          },
+          {
+            "button_id": "booked",
+            "actions": [
+              {"type": "supabase_update", "table": "leads", "set": {"status": "appointment_booked"}}
+            ]
+          },
+          {
+            "button_id": "spam",
+            "actions": [
+              {"type": "supabase_update", "table": "leads", "set": {"status": "spam"}},
+              {"type": "supabase_insert", "table": "blocked_numbers", "data": {"phone": "{{lead_phone}}"}}
+            ]
+          },
+          {
+            "button_id": "cant_help",
+            "actions": [
+              {"type": "supabase_update", "table": "leads", "set": {"status": "declined"}},
+              {"type": "twilio_sms", "to": "{{lead_phone}}", "body": "Hi {{caller_name}}, unfortunately we're unable to help with your request at this time. We recommend calling another contractor. Apologies - Hampstead Renovations"}
+            ]
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 30,
+      "name": "Appointment Booking Handler",
+      "type": "webhook",
+      "config": {
+        "trigger": "appointment_booking",
+        "actions": [
+          {
+            "type": "google_calendar_create",
+            "calendarId": "{{ROSS_CALENDAR_ID}}",
+            "event": {
+              "summary": "Site Visit: {{caller_name}} - {{project_type}}",
+              "location": "{{address}}, {{postcode}}",
+              "description": "Phone: {{formatted_phone}}\nProject: {{summary}}\nNotes: {{notes}}",
+              "start": "{{appointment_datetime}}",
+              "end": "{{appointment_datetime + 1 hour}}",
+              "reminders": {
+                "useDefault": false,
+                "overrides": [
+                  {"method": "popup", "minutes": 60},
+                  {"method": "popup", "minutes": 15}
+                ]
+              }
+            }
+          },
+          {
+            "type": "twilio_sms",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, confirmed: Ross will visit {{address}} on {{appointment_date}} at {{appointment_time}}. Reply to reschedule. - Hampstead Renovations"
+          },
+          {
+            "type": "supabase_update",
+            "table": "leads",
+            "set": {
+              "status": "appointment_booked",
+              "appointment_date": "{{appointment_date}}",
+              "appointment_time": "{{appointment_time}}"
+            }
+          },
+          {
+            "type": "schedule_reminder",
+            "time": "09:00",
+            "date": "{{appointment_date - 1 day}}",
+            "timezone": "Europe/London",
+            "actions": [
+              {
+                "type": "twilio_sms",
+                "to": "{{formatted_phone}}",
+                "body": "Reminder: Ross from Hampstead Renovations is visiting {{address}} tomorrow at {{appointment_time}}. Reply if you need to reschedule."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 40,
+      "name": "Follow-up Scheduler",
+      "type": "scheduled",
+      "description": "Automated follow-ups for missed callbacks",
+      "config": {
+        "schedule": "every_4_hours",
+        "timezone": "Europe/London",
+        "activeHours": {"start": "10:00", "end": "19:00"},
+        "query": {
+          "table": "leads",
+          "conditions": [
+            {"field": "status", "in": ["new", "no_answer"]},
+            {"field": "callback_attempts", "lessThan": 3},
+            {"field": "created_at", "olderThan": "4_hours"}
+          ]
+        },
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "message": "⏰ *Follow-up Reminder*\n\n{{caller_name}} hasn't been reached yet.\n📞 {{formatted_phone}}\n🏗️ {{project_type}}\n\nAttempts: {{callback_attempts}}/3"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 41,
+      "name": "Quote Follow-up",
+      "type": "scheduled",
+      "description": "Follow up on quotes after 3 days",
+      "config": {
+        "schedule": "daily_10am",
+        "timezone": "Europe/London",
+        "query": {
+          "table": "leads",
+          "conditions": [
+            {"field": "status", "equals": "quoted"},
+            {"field": "quote_sent_at", "olderThan": "3_days"},
+            {"field": "quote_followup_sent", "equals": false}
+          ]
+        },
+        "actions": [
+          {
+            "type": "twilio_sms",
+            "to": "{{formatted_phone}}",
+            "from": "Hampstead",
+            "body": "Hi {{caller_name}}, just checking in about the quote we sent for your {{project_type}} project. Happy to answer any questions - just give us a call or reply to this text. - Ross, Hampstead Renovations"
+          },
+          {
+            "type": "supabase_update",
+            "table": "leads",
+            "set": {"quote_followup_sent": true, "quote_followup_at": "{{now}}"}
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 45,
+      "name": "Morning Digest",
+      "type": "scheduled",
+      "description": "Daily summary of after-hours leads",
+      "config": {
+        "schedule": "daily",
+        "time": "08:00",
+        "timezone": "Europe/London",
+        "skipWeekends": false,
+        "query": {
+          "table": "leads",
+          "conditions": [
+            {"field": "is_after_hours", "equals": true},
+            {"field": "created_at", "since": "yesterday_18:00"}
+          ],
+          "orderBy": "quality_score DESC"
+        },
+        "actions": [
+          {
+            "type": "whatsapp",
+            "to": "+447459345456",
+            "message": "☀️ *Good Morning!*\n\n📬 *After-Hours Leads:* {{count}}\n\n{{#each leads}}{{@index + 1}}. *{{caller_name}}* ({{quality_score}})\n   📞 {{formatted_phone}}\n   🏗️ {{project_type}}\n{{/each}}\n\n*Highest priority first*"
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 50,
+      "name": "Spam Handler",
+      "type": "action",
+      "config": {
+        "actions": [
+          {
+            "type": "supabase_insert",
+            "table": "spam_log",
+            "data": {
+              "phone_number": "{{phone_number}}",
+              "spam_type": "{{spam_type}}",
+              "company_name": "{{company_name}}",
+              "timestamp": "{{now}}"
+            }
+          },
+          {
+            "type": "supabase_upsert",
+            "table": "blocked_numbers",
+            "key": "phone_number",
+            "data": {"blocked_at": "{{now}}", "reason": "spam"}
+          }
+        ]
+      }
+    },
+    
+    {
+      "id": 60,
+      "name": "Analytics Aggregator",
+      "type": "scheduled",
+      "description": "Daily analytics update",
+      "config": {
+        "schedule": "daily",
+        "time": "23:55",
+        "timezone": "Europe/London",
+        "actions": [
+          {
+            "type": "supabase_function",
+            "function": "update_daily_analytics",
+            "params": {"date": "{{today}}"}
+          }
+        ]
+      }
+    }
+  ],
+  
+  "ukSettings": {
+    "timezone": "Europe/London",
+    "dateFormat": "DD/MM/YYYY",
+    "timeFormat": "HH:mm",
+    "currency": "GBP",
+    "currencySymbol": "£",
+    "phoneFormat": {
+      "mobile": "+44 7XXX XXX XXX",
+      "landline": "+44 20 XXXX XXXX"
+    },
+    "businessHours": {
+      "monday": {"open": "08:00", "close": "18:00"},
+      "tuesday": {"open": "08:00", "close": "18:00"},
+      "wednesday": {"open": "08:00", "close": "18:00"},
+      "thursday": {"open": "08:00", "close": "18:00"},
+      "friday": {"open": "08:00", "close": "18:00"},
+      "saturday": {"open": "09:00", "close": "14:00"},
+      "sunday": "closed"
+    },
+    "bankHolidays2025": [
+      "2025-01-01", "2025-04-18", "2025-04-21", "2025-05-05",
+      "2025-05-26", "2025-08-25", "2025-12-25", "2025-12-26"
+    ],
+    "bankHolidays2026": [
+      "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-04",
+      "2026-05-25", "2026-08-31", "2026-12-25", "2026-12-28"
+    ]
+  },
+  
+  "twilioConfig": {
+    "region": "uk",
+    "accountSid": "{{TWILIO_ACCOUNT_SID}}",
+    "authToken": "{{TWILIO_AUTH_TOKEN}}",
+    "smsFrom": "Hampstead",
+    "voiceFrom": "+442071234567",
+    "statusCallbackUrl": "https://hook.eu1.make.com/YOUR_STATUS_WEBHOOK"
+  },
+  
+  "whatsappConfig": {
+    "provider": "twilio",
+    "from": "whatsapp:+447XXXXXXXXX",
+    "businessProfile": {
+      "name": "Hampstead Renovations",
+      "description": "Quality home renovations in NW London",
+      "address": "250 Finchley Road, London NW3",
+      "website": "https://hampsteadrenovations.co.uk"
+    }
+  },
+  
+  "googleCalendarConfig": {
+    "calendarId": "{{ROSS_CALENDAR_ID}}",
+    "serviceAccount": "{{GOOGLE_SERVICE_ACCOUNT}}",
+    "timezone": "Europe/London"
+  },
+  
+  "errorHandling": {
+    "onWebhookTimeout": {"action": "retry", "maxRetries": 3},
+    "onSmsFailure": {"action": "log_and_alert"},
+    "onWhatsAppFailure": {"action": "fallback_sms"},
+    "onCalendarFailure": {"action": "log_and_whatsapp_alert"}
+  },
+  
+  "metadata": {
+    "version": "5.0.0",
+    "codename": "COMPLETE",
+    "updated": "2025-11-30",
+    "features": [
+      "SMS confirmations to callers",
+      "WhatsApp interactive buttons",
+      "After-hours intelligent routing",
+      "Appointment booking with Google Calendar",
+      "Automated follow-up scheduling",
+      "Morning digest of overnight leads",
+      "Quote follow-up automation",
+      "Full UK compliance (TPS, GDPR, Ofcom)",
+      "UK timezone throughout",
+      "UK date/currency formats"
+    ]
+  }
+}
